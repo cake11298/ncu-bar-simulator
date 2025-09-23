@@ -5,10 +5,11 @@ module.exports = {
   mode: 'production',
   entry: './src/index.js',
   output: {
-    filename: 'bundle.js',
-    path: path.resolve(__dirname, 'public'),
+    filename: 'index.js',  // 正確，輸出單一 bundle
+    path: path.resolve(__dirname, 'dist'), // 建立 dist 資料夾作為最終靜態檔
     clean: true,
   },
+
   module: {
     rules: [
       {
