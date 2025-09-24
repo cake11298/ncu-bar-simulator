@@ -39,9 +39,14 @@ export class BarEnvironment {
         });
         
         const wallPositions = [
+            // 前牆（原本的後牆，在 z = -10）
             { pos: [0, 5, -10], rot: [0, 0, 0] },
+            // 左牆
             { pos: [-10, 5, 0], rot: [0, Math.PI/2, 0] },
-            { pos: [10, 5, 0], rot: [0, -Math.PI/2, 0] }
+            // 右牆
+            { pos: [10, 5, 0], rot: [0, -Math.PI/2, 0] },
+            // 新增：後牆（在 z = 10）
+            { pos: [0, 5, 15], rot: [0, Math.PI, 0] }
         ];
         
         wallPositions.forEach(({ pos, rot }) => {
@@ -964,86 +969,13 @@ export class BarEnvironment {
         monsteraGroup.castShadow = true;
         this.scene.add(monsteraGroup);
         
-        // 角落小型蕨類植物組合
-        const fernCorner = new THREE.Group();
-        
-        for (let i = 0; i < 3; i++) {
-            const fernGroup = new THREE.Group();
-            
-            // 小花盆
-            const smallPot = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.3, 0.25, 0.35),
-                new THREE.MeshPhongMaterial({ 
-                    color: 0x8d6e63,
-                    shininess: 30
-                })
-            );
-            smallPot.position.y = 0.175;
-            
-            // 蕨類葉片
-            for (let j = 0; j < 12; j++) {
-                const fernLeaf = new THREE.Group();
-                
-                // 主葉軸
-                const mainStem = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.005, 0.005, 0.6),
-                    new THREE.MeshPhongMaterial({ color: 0x2e7d32 })
-                );
-                mainStem.position.y = 0.3;
-                
-                // 小葉片
-                for (let k = 0; k < 10; k++) {
-                    const smallLeaf = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.08, 6, 4),
-                        new THREE.MeshPhongMaterial({ 
-                            color: 0x388e3c,
-                            shininess: 20
-                        })
-                    );
-                    smallLeaf.scale.set(1, 0.02, 0.6);
-                    smallLeaf.position.set(
-                        Math.sin(k * 0.2) * 0.05,
-                        0.1 + k * 0.04,
-                        Math.cos(k * 0.2) * 0.05
-                    );
-                    fernLeaf.add(smallLeaf);
-                }
-                
-                fernLeaf.add(mainStem);
-                
-                const leafAngle = (j / 12) * Math.PI * 2;
-                fernLeaf.rotation.set(
-                    Math.random() * 0.3,
-                    leafAngle,
-                    Math.random() * 0.2 - 0.1
-                );
-                
-                fernGroup.add(fernLeaf);
-            }
-            
-            fernGroup.add(smallPot);
-            fernGroup.position.set(
-                6 + i * 0.8,
-                0,
-                6 + i * 0.6
-            );
-            fernGroup.scale.set(
-                0.8 + Math.random() * 0.4,
-                0.8 + Math.random() * 0.4,
-                0.8 + Math.random() * 0.4
-            );
-            
-            fernCorner.add(fernGroup);
-        }
-        
-        this.scene.add(fernCorner);
-        
+    
         // 吊掛的常春藤
         const hangingPlant = new THREE.Group();
         
         // 吊盆
         const hangingPot = new THREE.Mesh(
-            new THREE.SphereGeometry(0.4, 8, 6),
+            new THREE.SphereGeometry(0.4, 10, 6),
             new THREE.MeshPhongMaterial({ 
                 color: 0x795548,
                 shininess: 40
@@ -1747,7 +1679,7 @@ export class BarEnvironment {
         
         neonSign.add(signBack);
         neonSign.add(neonTube);
-        neonSign.position.set(0, 6, -9.9);
+        neonSign.position.set(0, 8, -9.9);
         this.scene.add(neonSign);
     }
     
@@ -1887,53 +1819,55 @@ export class BarEnvironment {
             this.scene.add(ice);
         }
     }
+    
     createPremiumBottleDisplay() {
         const displayCase = new THREE.Group();
         
-        // 玻璃展示櫃
+        // 透明玻璃展示櫃 - 修改為真正透明
         const glassCase = new THREE.Mesh(
             new THREE.BoxGeometry(4, 2.5, 1.2, 1, 1, 1),
             new THREE.MeshPhongMaterial({ 
-                color: 0xffffff,
+                color: 0xffffff, // 改為白色
                 transparent: true,
-                opacity: 0.15,
+                opacity: 0.1, // 更透明
                 shininess: 200,
                 side: THREE.DoubleSide
             })
         );
         glassCase.position.y = 1.25;
         
-        // 展示櫃框架
+        // 展示櫃框架 - 改為更亮的金屬色
         const caseFrame = new THREE.Mesh(
             new THREE.BoxGeometry(4.1, 2.6, 1.3),
             new THREE.MeshPhongMaterial({ 
-                color: 0x2c2c2c,
-                shininess: 80
+                color: 0xc0c0c0, // 改為銀色
+                shininess: 120,
+                metalness: 0.8
             })
         );
         caseFrame.position.y = 1.25;
         
-        // 展示層板
+        // 展示層板 - 改為更透明的玻璃
         for (let i = 0; i < 3; i++) {
             const shelf = new THREE.Mesh(
                 new THREE.BoxGeometry(3.8, 0.05, 1),
                 new THREE.MeshPhongMaterial({ 
                     color: 0xffffff,
                     transparent: true,
-                    opacity: 0.3,
-                    shininess: 150
+                    opacity: 0.15, // 降低不透明度
+                    shininess: 200
                 })
             );
             shelf.position.set(0, 0.3 + i * 0.7, 0);
             displayCase.add(shelf);
             
-            // LED 燈帶
+            // LED 燈帶 - 增強亮度
             const ledStrip = new THREE.Mesh(
                 new THREE.BoxGeometry(3.6, 0.02, 0.1),
                 new THREE.MeshBasicMaterial({ 
                     color: 0x87ceeb,
                     transparent: true,
-                    opacity: 0.8
+                    opacity: 0.9 // 增加亮度
                 })
             );
             ledStrip.position.set(0, 0.32 + i * 0.7, -0.45);
@@ -1980,41 +1914,22 @@ export class BarEnvironment {
                 })
             );
             cap.position.y = bottle.height/2 + 0.03;
-            
-            // 特殊標籤
-            const premiumLabel = new THREE.Mesh(
-                new THREE.PlaneGeometry(0.2, 0.3),
-                new THREE.MeshBasicMaterial({ 
-                    color: bottle.name.includes('Crystal') ? 0x000000 : 0xffd700,
-                    transparent: true,
-                    opacity: 0.9
-                })
-            );
-            premiumLabel.position.set(0.01, 0, 0.15);
-            
+    
             bottleGroup.add(bottleBody);
             bottleGroup.add(cap);
-            bottleGroup.add(premiumLabel);
             bottleGroup.position.set(bottle.x, bottle.y, 0.2);
             
-            // 價值標籤
-            const valueTag = new THREE.Mesh(
-                new THREE.PlaneGeometry(0.3, 0.08),
-                new THREE.MeshBasicMaterial({ 
-                    color: 0xff6b6b,
-                    transparent: true,
-                    opacity: 0.8
-                })
-            );
-            valueTag.position.set(bottle.x, bottle.y - 0.5, 0.45);
-            displayCase.add(valueTag);
             
             displayCase.add(bottleGroup);
         });
         
-        displayCase.add(caseFrame);
+        //displayCase.add(caseFrame);
         displayCase.add(glassCase);
-        displayCase.position.set(-7, 0, -8);
+        
+        // 設定位置並旋轉90度
+        displayCase.position.set(9.5, 0, 9);
+        displayCase.rotation.y = Math.PI / -2; // 繞Y軸旋轉90度
+        
         displayCase.castShadow = true;
         displayCase.receiveShadow = true;
         

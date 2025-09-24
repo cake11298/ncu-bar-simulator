@@ -10,7 +10,7 @@ export class LightingSystem {
     
     setupLighting() {
         // 提升環境光亮度 - 讓整體更明亮溫馨
-        const ambientLight = new THREE.AmbientLight(0x4a3c28, 3);
+        const ambientLight = new THREE.AmbientLight(0x4a3c28, 5);
         this.scene.add(ambientLight);
         this.lights.push(ambientLight);
         
@@ -58,7 +58,7 @@ export class LightingSystem {
         this.scene.add(shelfSpotLight2);
         this.scene.add(shelfSpotLight2.target);
         this.lights.push(shelfSpotLight2);
-        
+
         // 客座區域溫馨照明
         for (let i = 0; i < 4; i++) {
             const seatLight = new THREE.PointLight(0xffd4a3, 0.6, 8);

@@ -103,9 +103,11 @@ export class PlayerController {
             moveVector.multiplyScalar(this.speed * deltaTime);
             moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation);
             
-            // 更新位置（加入邊界檢查）
             const newPosition = this.position.clone().add(moveVector);
-            if (Math.abs(newPosition.x) < 9 && Math.abs(newPosition.z) < 9) {
+            const inExpandedRoom = Math.abs(newPosition.x) < 10 && 
+                                newPosition.z > -9.8 && newPosition.z < 15;
+
+            if (inExpandedRoom) {
                 this.position.add(moveVector);
             }
         }

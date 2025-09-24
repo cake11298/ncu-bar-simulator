@@ -3,6 +3,7 @@ import { BarEnvironment } from './modules/BarEnvironment';
 import { NPCManager } from './modules/NPCManager';
 import { PlayerController } from './modules/PlayerController';
 import { LightingSystem } from './modules/LightingSystem';
+import { RetirementLounge } from './modules/RetirementLounge';
 import './styles/main.css';
 
 class BarSimulator {
@@ -31,6 +32,7 @@ class BarSimulator {
         document.getElementById('app').appendChild(this.renderer.domElement);
         
         // 載入模組
+        this.retirementLounge = new RetirementLounge(this.scene);
         this.environment = new BarEnvironment(this.scene);
         this.npcManager = new NPCManager(this.scene);
         this.playerController = new PlayerController(this.camera);
