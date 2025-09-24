@@ -64,11 +64,12 @@ class BarSimulator {
         this.lightingSystem.update(elapsedTime);
         
         // 檢查互動
-        const closestNPC = this.npcManager.checkInteractions(this.playerController.position);
-        
+        const interactionTarget = this.npcManager.checkInteractions(this.playerController.position);
+
         // 處理互動按鍵
         if (this.playerController.isInteracting() && !this.lastInteraction) {
-            this.npcManager.interact(closestNPC);
+            this.npcManager.interact(interactionTarget);
+            this.playerController.resetInteractionKey();
         }
         this.lastInteraction = this.playerController.isInteracting();
         

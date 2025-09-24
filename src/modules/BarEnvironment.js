@@ -126,6 +126,7 @@ export class BarEnvironment {
         shelfBack.castShadow = true;
         this.scene.add(shelfBack);
         
+        /*
         // 添加鏡子效果
         const mirror = new THREE.Mesh(
             new THREE.PlaneGeometry(9, 4),
@@ -139,6 +140,7 @@ export class BarEnvironment {
         );
         mirror.position.set(0, 3, -8.35);
         this.scene.add(mirror);
+        */
         
         // 建立多層架子與酒瓶
         for (let i = 0; i < 3; i++) {

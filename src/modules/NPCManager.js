@@ -4,7 +4,12 @@ export class NPCManager {
     constructor(scene) {
         this.scene = scene;
         this.npcs = [];
+        this.interactableObjects = [];
+        this.gustaveInteractionCount = 0; // 計算與 Gustave 的互動次數
+        this.audioContext = null;
+        this.currentlyPlaying = null;
         this.createNPCs();
+        this.createMusicSystem();
     }
     
     createNPCs() {
@@ -14,7 +19,7 @@ export class NPCManager {
             position: new THREE.Vector3(2, 0, -5),
             shirtColor: 0x0066cc,
             pantsColor: 0x1a1a1a,
-            role: '分子調酒專家',
+            role: '調酒社創始社長',
             dialogues: [
                 "嗨！我是 Gustave Yang，NCU 分子創意飲品研究社的創辦人！",
                 "你知道嗎？ 曦樂他家裡有養一隻貓！",
@@ -36,7 +41,7 @@ export class NPCManager {
             position: new THREE.Vector3(-2, 0, -5),
             shirtColor: 0xcc0066,
             pantsColor: 0x333333,
-            role: '調酒技術大師',
+            role: '調酒社共同創辦人',
             dialogues: [
                 "哈囉！我是 Seaton 曦樂，也是社團的共同創辦人！",
                 "挖勒，還得(ㄉㄟˇ)是你啊",
@@ -45,6 +50,118 @@ export class NPCManager {
                 "我最喜歡的是經典的 Old Fashioned"
             ]
         });
+        
+        // 創建音箱互動物件
+        this.createAmpInteraction();
+    }
+    
+    createMusicSystem() {
+        // 初始化 Web Audio API
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (error) {
+            console.log('Web Audio API not supported');
+        }
+    }
+    
+    createAmpInteraction() {
+        // 在音箱位置創建一個互動區域
+        const ampInteraction = {
+            position: new THREE.Vector3(8, 0, -8), // 音箱位置
+            radius: 2.5,
+            name: 'Guitar Amplifier',
+            type: 'music',
+            action: () => this.playGuitarSound()
+        };
+        
+        this.interactableObjects.push(ampInteraction);
+    }
+    
+    playGuitarSound() {
+        if (!this.audioContext) return;
+        
+        // 停止當前播放的音樂
+        if (this.currentlyPlaying) {
+            this.currentlyPlaying.stop();
+        }
+        
+        // 創建一個簡單的電吉他和弦音效
+        const now = this.audioContext.currentTime;
+        const gain = this.audioContext.createGain();
+        gain.connect(this.audioContext.destination);
+        
+        // 創建一個和弦 (E major)
+        const frequencies = [82.41, 110.00, 146.83, 196.00]; // E2, A2, D3, G3
+        
+        frequencies.forEach((freq, index) => {
+            const oscillator = this.audioContext.createOscillator();
+            const oscillatorGain = this.audioContext.createGain();
+            
+            oscillator.type = 'sawtooth'; // 電吉他音色
+            oscillator.frequency.setValueAtTime(freq, now);
+            
+            // 設定音量包絡
+            oscillatorGain.gain.setValueAtTime(0, now);
+            oscillatorGain.gain.linearRampToValueAtTime(0.1, now + 0.01);
+            oscillatorGain.gain.exponentialRampToValueAtTime(0.05, now + 0.5);
+            oscillatorGain.gain.exponentialRampToValueAtTime(0.001, now + 2);
+            
+            oscillator.connect(oscillatorGain);
+            oscillatorGain.connect(gain);
+            
+            oscillator.start(now);
+            oscillator.stop(now + 2);
+        });
+        
+        // 顯示音樂播放提示
+        this.showMusicNotification();
+        
+        // 設定當前播放狀態
+        this.currentlyPlaying = { stop: () => {} }; // 簡單的停止方法
+        setTimeout(() => {
+            this.currentlyPlaying = null;
+        }, 2000);
+    }
+    
+    showMusicNotification() {
+        // 創建音樂播放通知
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            z-index: 1000;
+            border: 2px solid #00ff00;
+            animation: fadeInOut 3s ease-in-out;
+        `;
+        
+        notification.textContent = '🎸 Electric Guitar Playing...';
+        document.body.appendChild(notification);
+        
+        // 添加 CSS 動畫
+        if (!document.getElementById('music-notification-style')) {
+            const style = document.createElement('style');
+            style.id = 'music-notification-style';
+            style.textContent = `
+                @keyframes fadeInOut {
+                    0% { opacity: 0; transform: translateX(100px); }
+                    20% { opacity: 1; transform: translateX(0); }
+                    80% { opacity: 1; transform: translateX(0); }
+                    100% { opacity: 0; transform: translateX(100px); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 3000);
     }
     
     addNPC(config) {
@@ -270,12 +387,107 @@ export class NPCManager {
         return tagGroup;
     }
     
+    createSpecialDialogue(text) {
+        // 創建特殊的對話框
+        const dialogueBox = document.createElement('div');
+        dialogueBox.id = 'special-dialogue-box';
+        dialogueBox.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #faca2cff, #ec692bff);
+            color: white;
+            padding: 30px 40px;
+            border-radius: 15px;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 1000;
+            border: 3px solid #ffffff;
+            box-shadow: 0 0 30px rgba(255, 0, 102, 0.5);
+            max-width: 600px;
+            animation: specialPulse 2s infinite;
+        `;
+        
+        const characterName = document.createElement('div');
+        characterName.style.cssText = `
+            font-size: 20px;
+            color: #ffff00;
+            margin-bottom: 15px;
+        `;
+        characterName.textContent = 'Gustave 智宇';
+        
+        const dialogueText = document.createElement('div');
+        dialogueText.style.cssText = `
+            margin-bottom: 20px;
+            line-height: 1.4;
+        `;
+        dialogueText.textContent = text;
+        
+        const closeButton = document.createElement('div');
+        closeButton.style.cssText = `
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            border-radius: 25px;
+            padding: 10px 20px;
+            cursor: pointer;
+            display: inline-block;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        `;
+        closeButton.textContent = '按下 X 關閉';
+        closeButton.addEventListener('mouseenter', () => {
+            closeButton.style.background = 'rgba(255, 255, 255, 0.4)';
+        });
+        closeButton.addEventListener('mouseleave', () => {
+            closeButton.style.background = 'rgba(255, 255, 255, 0.2)';
+        });
+        
+        dialogueBox.appendChild(characterName);
+        dialogueBox.appendChild(dialogueText);
+        dialogueBox.appendChild(closeButton);
+        
+        // 添加特殊動畫 CSS
+        if (!document.getElementById('special-dialogue-style')) {
+            const style = document.createElement('style');
+            style.id = 'special-dialogue-style';
+            style.textContent = `
+                @keyframes specialPulse {
+                    0% { box-shadow: 0 0 30px rgba(255, 0, 102, 0.5); }
+                    50% { box-shadow: 0 0 50px rgba(255, 102, 0, 0.8); }
+                    100% { box-shadow: 0 0 30px rgba(255, 0, 102, 0.5); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(dialogueBox);
+        
+        // 監聽 X 鍵關閉
+        const closeHandler = (e) => {
+            if (e.key.toLowerCase() === 'x') {
+                document.body.removeChild(dialogueBox);
+                document.removeEventListener('keydown', closeHandler);
+            }
+        };
+        document.addEventListener('keydown', closeHandler);
+        
+        // 點擊關閉按鈕也能關閉
+        closeButton.addEventListener('click', () => {
+            document.body.removeChild(dialogueBox);
+            document.removeEventListener('keydown', closeHandler);
+        });
+    }
+    
     checkInteractions(playerPosition) {
         const interactionDistance = 2.5;
         let nearNPC = false;
         let closestNPC = null;
         let minDistance = Infinity;
         
+        // 檢查 NPC 互動
         for (const npc of this.npcs) {
             const distance = playerPosition.distanceTo(npc.position);
             
@@ -288,20 +500,63 @@ export class NPCManager {
             }
         }
         
+        // 檢查其他互動物件（如音箱）
+        let nearInteractable = false;
+        let closestInteractable = null;
+        
+        for (const obj of this.interactableObjects) {
+            const distance = playerPosition.distanceTo(obj.position);
+            
+            if (distance < obj.radius) {
+                nearInteractable = true;
+                if (!closestNPC || distance < minDistance) {
+                    closestInteractable = obj;
+                }
+            }
+        }
+        
+        // 更新互動提示
         const hint = document.getElementById('interaction-hint');
         if (hint) {
-            if (nearNPC) {
+            if (nearNPC || nearInteractable) {
                 hint.classList.add('active');
+                if (closestInteractable) {
+                    hint.textContent = `按下 E 與 ${closestInteractable.name} 互動`;
+                } else if (closestNPC) {
+                    hint.textContent = `按下 E 與 ${closestNPC.userData.name} 交談`;
+                }
             } else {
                 hint.classList.remove('active');
             }
         }
         
-        return closestNPC;
+        return { npc: closestNPC, interactable: closestInteractable };
     }
     
-    interact(npc) {
+    interact(target) {
+        if (target.npc) {
+            this.interactWithNPC(target.npc);
+        } else if (target.interactable) {
+            this.interactWithObject(target.interactable);
+        }
+    }
+    
+    interactWithNPC(npc) {
         if (!npc) return;
+        
+        const userData = npc.userData;
+        
+        // 特別處理 Gustave 的互動計數
+        if (userData.name === 'Gustave') {
+            this.gustaveInteractionCount++;
+            
+            if (this.gustaveInteractionCount === 100) {
+                const hiddenName = "\u9EC3\u6B63\u5B89";
+                this.createSpecialDialogue(`${hiddenName}？ 別再按了！！！`);
+                this.gustaveInteractionCount = 0;
+                return;
+            }
+        }
         
         const dialogueBox = document.getElementById('dialogue-box');
         const characterName = document.getElementById('character-name');
@@ -309,7 +564,6 @@ export class NPCManager {
         
         if (!dialogueBox || !characterName || !dialogueText) return;
         
-        const userData = npc.userData;
         characterName.textContent = `${userData.name} - ${userData.role}`;
         dialogueText.textContent = userData.dialogues[userData.currentDialogue];
         
@@ -322,6 +576,12 @@ export class NPCManager {
         setTimeout(() => {
             dialogueBox.classList.remove('active');
         }, 4000);
+    }
+    
+    interactWithObject(obj) {
+        if (obj.type === 'music') {
+            obj.action();
+        }
     }
     
     update(deltaTime) {
