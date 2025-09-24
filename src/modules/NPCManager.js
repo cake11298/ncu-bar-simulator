@@ -5,9 +5,12 @@ export class NPCManager {
         this.scene = scene;
         this.npcs = [];
         this.interactableObjects = [];
-        this.gustaveInteractionCount = 0; // 計算與 Gustave 的互動次數
+        this.gustaveInteractionCount = 0;
         this.audioContext = null;
         this.currentlyPlaying = null;
+        this.musicPlaying = false; 
+        this.musicGainNode = null;
+        this.dialogueTimer = null;
         this.createNPCs();
         this.createMusicSystem();
     }
@@ -80,50 +83,134 @@ export class NPCManager {
     playGuitarSound() {
         if (!this.audioContext) return;
         
-        // 停止當前播放的音樂
-        if (this.currentlyPlaying) {
-            this.currentlyPlaying.stop();
+        if (this.musicPlaying) {
+            // 如果正在播放，則停止音樂
+            this.stopMusic();
+            return;
         }
         
-        // 創建一個簡單的電吉他和弦音效
-        const now = this.audioContext.currentTime;
-        const gain = this.audioContext.createGain();
-        gain.connect(this.audioContext.destination);
+        // 開始播放音樂
+        this.startMusic();
+    }
+
+    // 新增：開始播放音樂的方法
+    startMusic() {
+        if (!this.audioContext) return;
         
-        // 創建一個和弦 (E major)
-        const frequencies = [82.41, 110.00, 146.83, 196.00]; // E2, A2, D3, G3
+        // 創建主增益節點
+        this.musicGainNode = this.audioContext.createGain();
+        this.musicGainNode.connect(this.audioContext.destination);
+        this.musicGainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
         
-        frequencies.forEach((freq, index) => {
+        // 播放背景旋律
+        this.playMelody();
+        
+        // 播放節拍
+        this.playDrums();
+        
+        this.musicPlaying = true;
+        this.showMusicNotification('🎵 音樂播放中...', '#00ff00');
+    }
+
+    // 新增：停止音樂的方法
+    stopMusic() {
+        if (this.musicGainNode) {
+            // 漸層降低音量後斷開
+            const fadeTime = 0.5;
+            this.musicGainNode.gain.exponentialRampToValueAtTime(0.001, 
+                this.audioContext.currentTime + fadeTime);
+            
+            setTimeout(() => {
+                if (this.musicGainNode) {
+                    this.musicGainNode.disconnect();
+                    this.musicGainNode = null;
+                }
+            }, fadeTime * 1000);
+        }
+        
+        this.musicPlaying = false;
+        this.showMusicNotification('🔇 音樂已停止', '#ff6600');
+    }
+
+    // 新增：播放旋律的方法
+    playMelody() {
+        const melody = [
+            {note: 261.63, time: 0, duration: 0.5},    // C4
+            {note: 293.66, time: 0.5, duration: 0.5},  // D4
+            {note: 329.63, time: 1, duration: 0.5},    // E4
+            {note: 293.66, time: 1.5, duration: 0.5},  // D4
+            {note: 261.63, time: 2, duration: 1},      // C4
+            {note: 392.00, time: 3, duration: 0.5},    // G4
+            {note: 349.23, time: 3.5, duration: 0.5},  // F4
+            {note: 329.63, time: 4, duration: 1},      // E4
+        ];
+        
+        const startTime = this.audioContext.currentTime;
+        
+        melody.forEach(note => {
             const oscillator = this.audioContext.createOscillator();
-            const oscillatorGain = this.audioContext.createGain();
+            const noteGain = this.audioContext.createGain();
             
-            oscillator.type = 'sawtooth'; // 電吉他音色
-            oscillator.frequency.setValueAtTime(freq, now);
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(note.note, startTime + note.time);
             
-            // 設定音量包絡
-            oscillatorGain.gain.setValueAtTime(0, now);
-            oscillatorGain.gain.linearRampToValueAtTime(0.1, now + 0.01);
-            oscillatorGain.gain.exponentialRampToValueAtTime(0.05, now + 0.5);
-            oscillatorGain.gain.exponentialRampToValueAtTime(0.001, now + 2);
+            // 音量包絡
+            noteGain.gain.setValueAtTime(0, startTime + note.time);
+            noteGain.gain.linearRampToValueAtTime(0.4, startTime + note.time + 0.01);
+            noteGain.gain.exponentialRampToValueAtTime(0.001, 
+                startTime + note.time + note.duration);
             
-            oscillator.connect(oscillatorGain);
-            oscillatorGain.connect(gain);
+            oscillator.connect(noteGain);
+            noteGain.connect(this.musicGainNode);
             
-            oscillator.start(now);
-            oscillator.stop(now + 2);
+            oscillator.start(startTime + note.time);
+            oscillator.stop(startTime + note.time + note.duration);
         });
         
-        // 顯示音樂播放提示
-        this.showMusicNotification();
+        // 循環播放
+        if (this.musicPlaying) {
+            setTimeout(() => {
+                if (this.musicPlaying) {
+                    this.playMelody();
+                }
+            }, 5000);
+        }
+    }
+
+    // 新增：播放鼓點的方法
+    playDrums() {
+        const drumPattern = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]; // 每0.5秒一下
+        const startTime = this.audioContext.currentTime;
         
-        // 設定當前播放狀態
-        this.currentlyPlaying = { stop: () => {} }; // 簡單的停止方法
-        setTimeout(() => {
-            this.currentlyPlaying = null;
-        }, 2000);
+        drumPattern.forEach(time => {
+            const oscillator = this.audioContext.createOscillator();
+            const drumGain = this.audioContext.createGain();
+            
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(60, startTime + time); // 低頻鼓聲
+            
+            drumGain.gain.setValueAtTime(0, startTime + time);
+            drumGain.gain.linearRampToValueAtTime(0.2, startTime + time + 0.01);
+            drumGain.gain.exponentialRampToValueAtTime(0.001, startTime + time + 0.2);
+            
+            oscillator.connect(drumGain);
+            drumGain.connect(this.musicGainNode);
+            
+            oscillator.start(startTime + time);
+            oscillator.stop(startTime + time + 0.2);
+        });
+        
+        // 循環播放鼓點
+        if (this.musicPlaying) {
+            setTimeout(() => {
+                if (this.musicPlaying) {
+                    this.playDrums();
+                }
+            }, 4000);
+        }
     }
     
-    showMusicNotification() {
+    showMusicNotification(message = '🎸 Electric Guitar Playing...', color = '#00ff00') {
         // 創建音樂播放通知
         const notification = document.createElement('div');
         notification.style.cssText = `
@@ -131,20 +218,20 @@ export class NPCManager {
             top: 20px;
             right: 20px;
             background: rgba(0, 0, 0, 0.8);
-            color: #00ff00;
+            color: ${color};
             padding: 15px 20px;
             border-radius: 8px;
             font-family: Arial, sans-serif;
             font-size: 16px;
             z-index: 1000;
-            border: 2px solid #00ff00;
+            border: 2px solid ${color};
             animation: fadeInOut 3s ease-in-out;
         `;
         
-        notification.textContent = '🎸 Electric Guitar Playing...';
+        notification.textContent = message;
         document.body.appendChild(notification);
         
-        // 添加 CSS 動畫
+        // 添加 CSS 動畫（保持原樣）
         if (!document.getElementById('music-notification-style')) {
             const style = document.createElement('style');
             style.id = 'music-notification-style';
@@ -160,7 +247,9 @@ export class NPCManager {
         }
         
         setTimeout(() => {
-            document.body.removeChild(notification);
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
         }, 3000);
     }
     
@@ -521,7 +610,12 @@ export class NPCManager {
             if (nearNPC || nearInteractable) {
                 hint.classList.add('active');
                 if (closestInteractable) {
-                    hint.textContent = `按下 E 與 ${closestInteractable.name} 互動`;
+                    if (closestInteractable.type === 'music') {
+                        const action = this.musicPlaying ? '關閉音樂' : '播放音樂';
+                        hint.textContent = `按下 E ${action}`;
+                    } else {
+                        hint.textContent = `按下 E 與 ${closestInteractable.name} 互動`;
+                    }
                 } else if (closestNPC) {
                     hint.textContent = `按下 E 與 ${closestNPC.userData.name} 交談`;
                 }
@@ -550,10 +644,18 @@ export class NPCManager {
         if (userData.name === 'Gustave') {
             this.gustaveInteractionCount++;
             
-            if (this.gustaveInteractionCount === 100) {
+            if (this.gustaveInteractionCount == 100) {
                 const hiddenName = "\u9EC3\u6B63\u5B89";
                 this.createSpecialDialogue(`${hiddenName}？ 別再按了！！！`);
-                this.gustaveInteractionCount = 0;
+                return;
+            }
+            if (this.gustaveInteractionCount == 200) {
+                const hiddenName = "\u9EC3\u6B63\u5B89";
+                this.createSpecialDialogue(`${hiddenName}？ 雖然這是我留的小心思 但別再按了！！！ \u6211\u4ec0\u9ebc\u90fd\u4e0d\u6703\u8aaa\u7684`);
+                return;
+            }
+            if (this.gustaveInteractionCount == 300) {
+                this.createSpecialDialogue(`你到底是有多無聊啊？ \u4e0d\u8981\u5728\u9019\u88e1\u57f7\u8457\u4e86!`);
                 return;
             }
         }
@@ -564,17 +666,30 @@ export class NPCManager {
         
         if (!dialogueBox || !characterName || !dialogueText) return;
         
+        // 立即設置新的對話內容
         characterName.textContent = `${userData.name} - ${userData.role}`;
         dialogueText.textContent = userData.dialogues[userData.currentDialogue];
         
+        // 強制顯示對話框（移除後立即添加，觸發重新動畫）
+        dialogueBox.classList.remove('active');
+        // 強制瀏覽器重繪，確保 remove 生效
+        dialogueBox.offsetHeight;
         dialogueBox.classList.add('active');
         
         // 循環對話
         userData.currentDialogue = (userData.currentDialogue + 1) % userData.dialogues.length;
         
-        // 3秒後自動隱藏
+        // 創建這次對話專屬的計時器，不管理任何全局計時器
         setTimeout(() => {
-            dialogueBox.classList.remove('active');
+            // 只有在對話框仍然顯示相同內容時才隱藏
+            // 通過檢查內容來確保這是同一次對話
+            const currentName = characterName.textContent;
+            const currentText = dialogueText.textContent;
+            
+            if (currentName === `${userData.name} - ${userData.role}` && 
+                currentText === userData.dialogues[(userData.currentDialogue - 1 + userData.dialogues.length) % userData.dialogues.length]) {
+                dialogueBox.classList.remove('active');
+            }
         }, 4000);
     }
     

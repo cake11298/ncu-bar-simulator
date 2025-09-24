@@ -82,30 +82,6 @@ export class BarEnvironment {
         );
         counterTop.position.set(0, 1.05, -3);
         
-        /*
-        // 添加鉻合金邊框
-        const edgeGeometry = new THREE.BoxGeometry(12.3, 0.05, 0.05);
-        const edgeMaterial = new THREE.MeshPhongMaterial({
-            color: 0xc0c0c0,
-            shininess: 200,
-            metalness: 0.8
-        });
-        
-        const edges = [
-            [0, 1.12, -4.125],
-            [0, 1.12, -1.875],
-            [6.15, 1.12, -3],
-            [-6.15, 1.12, -3]
-        ];
-        
-        edges.forEach(pos => {
-            const edge = new THREE.Mesh(edgeGeometry, edgeMaterial);
-            edge.position.set(...pos);
-            if (Math.abs(pos[2]) < 4) edge.rotation.y = Math.PI / 2;
-            counterGroup.add(edge);
-        });
-        */
-        
         counterGroup.add(counter);
         counterGroup.add(counterTop);
         this.scene.add(counterGroup);
@@ -125,22 +101,6 @@ export class BarEnvironment {
         shelfBack.position.set(0, 3, -8.5);
         shelfBack.castShadow = true;
         this.scene.add(shelfBack);
-        
-        /*
-        // 添加鏡子效果
-        const mirror = new THREE.Mesh(
-            new THREE.PlaneGeometry(9, 4),
-            new THREE.MeshPhongMaterial({ 
-                color: 0x888888,
-                shininess: 300,
-                transparent: true,
-                opacity: 0.8,
-                reflectivity: 0.9
-            })
-        );
-        mirror.position.set(0, 3, -8.35);
-        this.scene.add(mirror);
-        */
         
         // 建立多層架子與酒瓶
         for (let i = 0; i < 3; i++) {
@@ -317,7 +277,7 @@ export class BarEnvironment {
                 shininess: 5
             })
         );
-        barMat.position.set(0, 1.1, -4);
+        barMat.position.set(0, 1.1, -3);
         this.scene.add(barMat);
         
         // 添加墊子上的品牌Logo區域
@@ -1573,7 +1533,7 @@ export class BarEnvironment {
         cashRegister.add(registerBody);
         cashRegister.add(registerScreen);
         cashRegister.position.set(5, 1.06, -3);
-        this.scene.add(cashRegister);
+        //this.scene.add(cashRegister);
         
         // 菜單架
         const menuBoard = new THREE.Group();
