@@ -14,6 +14,7 @@ export class BarEnvironment {
         this.createLiquorShelf();
         this.createBarStools();
         this.createBarDecoration();
+        this.createPremiumBottleDisplay();
     }
     
     createFloor() {
@@ -212,29 +213,123 @@ export class BarEnvironment {
         );
         cap.position.y = type.height/2 + 0.29;
         
-        // 更詳細的標籤
-        const labelGeometry = new THREE.PlaneGeometry(0.25, 0.4);
-        const labelMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xf5f5dc,
-            transparent: true,
-            opacity: 0.9
-        });
-        
-        const label = new THREE.Mesh(labelGeometry, labelMaterial);
-        label.position.set(0.01, 0.1, 0.181);
-        label.rotation.y = -0.1;
-        
-        // 添加標籤邊框
-        const labelBorder = new THREE.Mesh(
-            new THREE.PlaneGeometry(0.27, 0.42),
-            new THREE.MeshBasicMaterial({ 
-                color: 0xdaa520,
-                transparent: true,
-                opacity: 0.8
-            })
-        );
-        labelBorder.position.set(0.01, 0.1, 0.18);
-        labelBorder.rotation.y = -0.1;
+        // === 更詳細的標籤系統 ===
+        const createBottleLabel = (type) => {
+            const labelGroup = new THREE.Group();
+            
+            // 主標籤背景
+            const labelGeometry = new THREE.PlaneGeometry(0.28, 0.45);
+            let labelColor, textColor, brandName, subText;
+            
+            switch(type.shape) {
+                case 'gin':
+                    labelColor = 0xf5f5dc; // 米白色
+                    textColor = 0x0f4d2a; // 深綠色
+                    brandName = type.label;
+                    subText = 'LONDON DRY GIN\n47% ABV';
+                    break;
+                case 'vodka':
+                    labelColor = 0xe6e6fa; // 淺紫色
+                    textColor = 0x191970; // 深藍色
+                    brandName = type.label;
+                    subText = 'PREMIUM VODKA\n40% ABV';
+                    break;
+                case 'whiskey':
+                    labelColor = 0xffd700; // 金色
+                    textColor = 0x8b4513; // 棕色
+                    brandName = type.label;
+                    subText = 'TENNESSEE WHISKEY\n40% ABV';
+                    break;
+                case 'tequila':
+                    labelColor = 0xfffacd; // 檸檬絲綢色
+                    textColor = 0x8b0000; // 暗紅色
+                    brandName = type.label;
+                    subText = 'SILVER TEQUILA\n38% ABV';
+                    break;
+                case 'rum':
+                    labelColor = 0xf4e4bc; // 淺棕色
+                    textColor = 0x654321; // 深棕色
+                    brandName = type.label;
+                    subText = 'CARIBBEAN RUM\n37.5% ABV';
+                    break;
+                default:
+                    labelColor = 0xf5f5dc;
+                    textColor = 0x333333;
+                    brandName = type.label;
+                    subText = 'PREMIUM SPIRIT\n40% ABV';
+            }
+            
+            const label = new THREE.Mesh(
+                labelGeometry,
+                new THREE.MeshBasicMaterial({ 
+                    color: labelColor,
+                    transparent: true,
+                    opacity: 0.95
+                })
+            );
+            label.position.set(0.01, 0.1, 0.181);
+            label.rotation.y = -0.1;
+            
+            // 標籤邊框
+            const labelBorder = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.3, 0.47),
+                new THREE.MeshBasicMaterial({ 
+                    color: textColor,
+                    transparent: true,
+                    opacity: 0.8
+                })
+            );
+            labelBorder.position.set(0.01, 0.1, 0.18);
+            labelBorder.rotation.y = -0.1;
+            
+            // 創建品牌Logo區域
+            const logoArea = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.2, 0.08),
+                new THREE.MeshBasicMaterial({ 
+                    color: textColor,
+                    transparent: true,
+                    opacity: 0.9
+                })
+            );
+            logoArea.position.set(0.011, 0.2, 0.182);
+            logoArea.rotation.y = -0.1;
+            
+            // 年份標籤（部分酒類）
+            if (type.shape === 'whiskey' || Math.random() > 0.5) {
+                const vintageLabel = new THREE.Mesh(
+                    new THREE.PlaneGeometry(0.12, 0.05),
+                    new THREE.MeshBasicMaterial({ 
+                        color: 0x8b0000,
+                        transparent: true,
+                        opacity: 0.9
+                    })
+                );
+                vintageLabel.position.set(0.011, -0.1, 0.182);
+                vintageLabel.rotation.y = -0.1;
+                labelGroup.add(vintageLabel);
+            }
+            
+            // 酒標裝飾線條
+            for (let i = 0; i < 3; i++) {
+                const decorLine = new THREE.Mesh(
+                    new THREE.PlaneGeometry(0.24, 0.005),
+                    new THREE.MeshBasicMaterial({ 
+                        color: textColor,
+                        transparent: true,
+                        opacity: 0.7
+                    })
+                );
+                decorLine.position.set(0.011, 0.05 - i * 0.08, 0.182);
+                decorLine.rotation.y = -0.1;
+                labelGroup.add(decorLine);
+            }
+            
+            labelGroup.add(labelBorder);
+            labelGroup.add(label);
+            labelGroup.add(logoArea);
+            
+            return labelGroup;
+        };
         
         // 液體效果（對於透明瓶子）
         if (type.color !== 0xffffff && type.shape !== 'whiskey') {
@@ -256,8 +351,8 @@ export class BarEnvironment {
             bottleGroup.add(liquid);
         }
         
-        bottleGroup.add(labelBorder);
-        bottleGroup.add(label);
+        const bottleLabel = createBottleLabel(type);
+        bottleGroup.add(bottleLabel);
         bottleGroup.add(bottle);
         bottleGroup.add(neck);
         bottleGroup.add(cap);
@@ -1414,6 +1509,201 @@ export class BarEnvironment {
     }
     
     createWallDecor() {
+        const menuGroup = new THREE.Group();
+        
+        // 黑板背景
+        const chalkboard = new THREE.Mesh(
+            new THREE.PlaneGeometry(3.5, 4),
+            new THREE.MeshPhongMaterial({ 
+                color: 0x1a2f1a,
+                shininess: 5,
+                roughness: 0.9
+            })
+        );
+        
+        // 黑板框架
+        const chalkboardFrame = new THREE.Mesh(
+            new THREE.PlaneGeometry(3.7, 4.2),
+            new THREE.MeshPhongMaterial({ 
+                color: 0x8b4513,
+                shininess: 40
+            })
+        );
+        chalkboardFrame.position.z = -0.01;
+        
+        // 標題區域
+        const titleArea = new THREE.Mesh(
+            new THREE.PlaneGeometry(3, 0.6),
+            new THREE.MeshBasicMaterial({ 
+                color: 0xffd700,
+                transparent: true,
+                opacity: 0.8
+            })
+        );
+        titleArea.position.set(0, 1.5, 0.01);
+        
+        // 分類標題背景
+        const categories = [
+            { name: '經典調酒', y: 0.8, color: 0xff6b6b },
+            { name: '分子創意', y: 0.2, color: 0x4ecdc4 },
+            { name: '無酒精', y: -0.4, color: 0x45b7d1 },
+            { name: '限定特調', y: -1.0, color: 0x96ceb4 }
+        ];
+        
+        categories.forEach(category => {
+            const categoryBg = new THREE.Mesh(
+                new THREE.PlaneGeometry(3, 0.4),
+                new THREE.MeshBasicMaterial({ 
+                    color: category.color,
+                    transparent: true,
+                    opacity: 0.3
+                })
+            );
+            categoryBg.position.set(0, category.y, 0.005);
+            menuGroup.add(categoryBg);
+            
+            // 分類標題文字區域
+            const categoryTitle = new THREE.Mesh(
+                new THREE.PlaneGeometry(1.5, 0.15),
+                new THREE.MeshBasicMaterial({ 
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.9
+                })
+            );
+            categoryTitle.position.set(-0.8, category.y + 0.08, 0.01);
+            menuGroup.add(categoryTitle);
+        });
+        
+        // 創意菜單項目
+        const menuItems = [
+            // 經典調酒
+            { name: 'Old Fashioned 懷舊經典', price: '$280', y: 0.65, creativity: '威士忌 × 苦精 × 時光' },
+            { name: 'Negroni 義式苦甜', price: '$320', y: 0.5, creativity: '琴酒 × 金巴利 × 甜苦艾' },
+            
+            // 分子創意
+            { name: '液氮馬丁尼', price: '$450', y: 0.05, creativity: '-196°C 的浪漫邂逅' },
+            { name: '煙燻威士忌球', price: '$520', y: -0.1, creativity: '威士忌包裹在煙霧中的驚喜' },
+            
+            // 無酒精
+            { name: '植感綠洲', price: '$180', y: -0.55, creativity: '薄荷 × 檸檬草 × 氣泡' },
+            { name: '紫蘇莓果氣泡', price: '$200', y: -0.7, creativity: '日式紫蘇遇見北歐莓果' },
+            
+            // 限定特調
+            { name: 'NCU 校園回憶', price: '$399', y: -1.15, creativity: '只有我們懂的青春滋味' },
+            { name: '中大湖畔夕陽', price: '$350', y: -1.3, creativity: '橙色漸層如湖光山色' }
+        ];
+        
+        menuItems.forEach(item => {
+            // 項目名稱背景
+            const itemBg = new THREE.Mesh(
+                new THREE.PlaneGeometry(2.8, 0.12),
+                new THREE.MeshBasicMaterial({ 
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.1
+                })
+            );
+            itemBg.position.set(0.1, item.y, 0.008);
+            menuGroup.add(itemBg);
+            
+            // 價格標籤
+            const priceTag = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.6, 0.08),
+                new THREE.MeshBasicMaterial({ 
+                    color: 0xffd700,
+                    transparent: true,
+                    opacity: 0.8
+                })
+            );
+            priceTag.position.set(1.2, item.y, 0.009);
+            menuGroup.add(priceTag);
+            
+            // 創意描述區域
+            if (item.creativity) {
+                const creativityArea = new THREE.Mesh(
+                    new THREE.PlaneGeometry(2.5, 0.04),
+                    new THREE.MeshBasicMaterial({ 
+                        color: 0x98fb98,
+                        transparent: true,
+                        opacity: 0.6
+                    })
+                );
+                creativityArea.position.set(0, item.y - 0.08, 0.007);
+                menuGroup.add(creativityArea);
+            }
+        });
+        
+        // 特殊裝飾元素
+        // 粉筆灰塵效果
+        for (let i = 0; i < 20; i++) {
+            const chalkDust = new THREE.Mesh(
+                new THREE.SphereGeometry(0.005 + Math.random() * 0.01),
+                new THREE.MeshBasicMaterial({ 
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.3 + Math.random() * 0.4
+                })
+            );
+            chalkDust.position.set(
+                -1.5 + Math.random() * 3,
+                -1.8 + Math.random() * 0.3,
+                0.01
+            );
+            menuGroup.add(chalkDust);
+        }
+        
+        // 黑板邊角裝飾
+        const cornerDecors = [
+            { x: -1.6, y: 1.8 }, { x: 1.6, y: 1.8 },
+            { x: -1.6, y: -1.8 }, { x: 1.6, y: -1.8 }
+        ];
+        
+        cornerDecors.forEach(corner => {
+            const decor = new THREE.Mesh(
+                new THREE.RingGeometry(0.08, 0.12, 8),
+                new THREE.MeshBasicMaterial({ 
+                    color: 0xffd700,
+                    transparent: true,
+                    opacity: 0.7
+                })
+            );
+            decor.position.set(corner.x, corner.y, 0.01);
+            menuGroup.add(decor);
+        });
+        
+        // 今日特價標籤
+        const specialOfferBanner = new THREE.Mesh(
+            new THREE.PlaneGeometry(1, 0.3),
+            new THREE.MeshBasicMaterial({ 
+                color: 0xff4757,
+                transparent: true,
+                opacity: 0.9
+            })
+        );
+        specialOfferBanner.position.set(1.3, -1.7, 0.02);
+        specialOfferBanner.rotation.z = -Math.PI / 12;
+        
+        const specialText = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.8, 0.15),
+            new THREE.MeshBasicMaterial({ 
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.95
+            })
+        );
+        specialText.position.set(1.3, -1.7, 0.021);
+        specialText.rotation.z = -Math.PI / 12;
+
+        menuGroup.add(chalkboardFrame);
+        menuGroup.add(chalkboard);
+        menuGroup.add(titleArea);
+        menuGroup.add(specialOfferBanner);
+        menuGroup.add(specialText);
+        menuGroup.position.set(8, 5, -9.9);
+        //this.scene.add(menuGroup);
+
+
         // 復古酒類海報
         for (let i = 0; i < 3; i++) {
             const poster = new THREE.Mesh(
@@ -1596,5 +1886,138 @@ export class BarEnvironment {
             );
             this.scene.add(ice);
         }
+    }
+    createPremiumBottleDisplay() {
+        const displayCase = new THREE.Group();
+        
+        // 玻璃展示櫃
+        const glassCase = new THREE.Mesh(
+            new THREE.BoxGeometry(4, 2.5, 1.2, 1, 1, 1),
+            new THREE.MeshPhongMaterial({ 
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.15,
+                shininess: 200,
+                side: THREE.DoubleSide
+            })
+        );
+        glassCase.position.y = 1.25;
+        
+        // 展示櫃框架
+        const caseFrame = new THREE.Mesh(
+            new THREE.BoxGeometry(4.1, 2.6, 1.3),
+            new THREE.MeshPhongMaterial({ 
+                color: 0x2c2c2c,
+                shininess: 80
+            })
+        );
+        caseFrame.position.y = 1.25;
+        
+        // 展示層板
+        for (let i = 0; i < 3; i++) {
+            const shelf = new THREE.Mesh(
+                new THREE.BoxGeometry(3.8, 0.05, 1),
+                new THREE.MeshPhongMaterial({ 
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.3,
+                    shininess: 150
+                })
+            );
+            shelf.position.set(0, 0.3 + i * 0.7, 0);
+            displayCase.add(shelf);
+            
+            // LED 燈帶
+            const ledStrip = new THREE.Mesh(
+                new THREE.BoxGeometry(3.6, 0.02, 0.1),
+                new THREE.MeshBasicMaterial({ 
+                    color: 0x87ceeb,
+                    transparent: true,
+                    opacity: 0.8
+                })
+            );
+            ledStrip.position.set(0, 0.32 + i * 0.7, -0.45);
+            displayCase.add(ledStrip);
+        }
+        
+        // 精品酒款展示
+        const premiumBottles = [
+            { name: 'Macallan 25', color: 0x8b4513, height: 0.9, x: -1.3, y: 1.6, rarity: '珍藏' },
+            { name: 'Dom Pérignon', color: 0x2d4a2d, height: 0.85, x: -0.4, y: 1.6, rarity: '香檳' },
+            { name: 'Hennessy XO', color: 0x4a2c17, height: 0.8, x: 0.5, y: 1.6, rarity: '干邑' },
+            { name: 'Grey Goose Magnum', color: 0xe6e6fa, height: 0.95, x: 1.4, y: 1.6, rarity: '大瓶裝' },
+            
+            { name: 'Hibiki 21', color: 0xdaa520, height: 0.85, x: -1.1, y: 0.9, rarity: '日威' },
+            { name: 'Johnnie Blue', color: 0x191970, height: 0.9, x: 0, y: 0.9, rarity: '藍牌' },
+            { name: 'Rémy XO', color: 0x8b4513, height: 0.82, x: 1.1, y: 0.9, rarity: '特級' },
+            
+            { name: 'Armand de Brignac', color: 0xffd700, height: 0.88, x: -0.7, y: 0.2, rarity: '黑桃A' },
+            { name: 'Crystal Head', color: 0xffffff, height: 0.75, x: 0.7, y: 0.2, rarity: '水晶骷髏' }
+        ];
+        
+        premiumBottles.forEach(bottle => {
+            const bottleGroup = new THREE.Group();
+            
+            // 瓶身
+            const bottleBody = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.12, 0.15, bottle.height, 8),
+                new THREE.MeshPhongMaterial({ 
+                    color: bottle.color,
+                    transparent: bottle.color === 0xffffff,
+                    opacity: bottle.color === 0xffffff ? 0.3 : 0.8,
+                    shininess: 150,
+                    metalness: 0.3
+                })
+            );
+            
+            // 瓶蓋
+            const cap = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.08, 0.08, 0.06),
+                new THREE.MeshPhongMaterial({ 
+                    color: bottle.name.includes('Dom') ? 0xffd700 : 0x2c2c2c,
+                    shininess: 120,
+                    metalness: 0.8
+                })
+            );
+            cap.position.y = bottle.height/2 + 0.03;
+            
+            // 特殊標籤
+            const premiumLabel = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.2, 0.3),
+                new THREE.MeshBasicMaterial({ 
+                    color: bottle.name.includes('Crystal') ? 0x000000 : 0xffd700,
+                    transparent: true,
+                    opacity: 0.9
+                })
+            );
+            premiumLabel.position.set(0.01, 0, 0.15);
+            
+            bottleGroup.add(bottleBody);
+            bottleGroup.add(cap);
+            bottleGroup.add(premiumLabel);
+            bottleGroup.position.set(bottle.x, bottle.y, 0.2);
+            
+            // 價值標籤
+            const valueTag = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.3, 0.08),
+                new THREE.MeshBasicMaterial({ 
+                    color: 0xff6b6b,
+                    transparent: true,
+                    opacity: 0.8
+                })
+            );
+            valueTag.position.set(bottle.x, bottle.y - 0.5, 0.45);
+            displayCase.add(valueTag);
+            
+            displayCase.add(bottleGroup);
+        });
+        
+        displayCase.add(caseFrame);
+        displayCase.add(glassCase);
+        displayCase.position.set(-7, 0, -8);
+        displayCase.castShadow = true;
+        displayCase.receiveShadow = true;
+        
+        this.scene.add(displayCase);
     }
 }
