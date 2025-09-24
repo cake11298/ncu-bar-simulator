@@ -1533,7 +1533,7 @@ export class BarEnvironment {
         cashRegister.add(registerBody);
         cashRegister.add(registerScreen);
         cashRegister.position.set(5, 1.06, -3);
-        //this.scene.add(cashRegister);
+        this.scene.add(cashRegister);
         
         // 菜單架
         const menuBoard = new THREE.Group();
@@ -1558,7 +1558,7 @@ export class BarEnvironment {
         }
         
         menuBoard.add(boardBack);
-        menuBoard.position.set(-8, 4, -9.9);
+        menuBoard.position.set(-8, 6, -9.9);
         this.scene.add(menuBoard);
         
         // 冰桶

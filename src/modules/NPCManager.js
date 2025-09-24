@@ -53,6 +53,83 @@ export class NPCManager {
                 "我最喜歡的是經典的 Old Fashioned"
             ]
         });
+
+        // 正安 - 女性幹部（休閒風格）
+        this.addNPC({
+            name: '正安',
+            position: new THREE.Vector3(9, 0, 1),
+            shirtColor: 0x333333, // 粉紅色上衣
+            pantsColor: 0x4169e1, // 藍色牛仔褲
+            role: '公關兼副社長',
+            rotation: -Math.PI / 2,
+            dialogues: [
+                "嗨！我是正安，負責社團的活動企劃~",
+                "下次我們要辦一個分子調酒工作坊，你要來嗎？",
+                "我最喜歡規劃有趣的主題派對了！",
+                "你知道嗎？我們社團的IG都是我在經營的",
+                "最近在策劃跟其他學校的交流活動",
+                "調酒雖然不是我的強項，但活動規劃我可是專家！"
+            ],
+            gender: 'female'
+        });
+
+        // 瑜柔 - 女性幹部（文青風格）
+        this.addNPC({
+            name: '瑜柔(宅魚)',
+            position: new THREE.Vector3(9, 0, 3),
+            shirtColor: 0x90ee90, // 淺綠色襯衫
+            pantsColor: 0x2f4f4f, // 深灰色長褲
+            role: '學術研究長',
+            rotation: -Math.PI / 2,
+            dialogues: [
+                "我是瑜柔，主要負責社團的學術研究部分",
+                "分子調酒其實有很深的化學原理呢",
+                "我正在研究不同酒類的分子結構對味覺的影響",
+                "圖書館是我最常去的地方，那裡有很多調酒相關的文獻",
+                "你有興趣了解調酒背後的科學原理嗎？",
+                "理論與實務並重，這是我們社團的特色"
+            ],
+            gender: 'female'
+        });
+
+        // 恩若 - 女性幹部（活潑風格）
+        this.addNPC({
+            name: '恩若',
+            position: new THREE.Vector3(9, 0, -1),
+            shirtColor: 0xffd700, // 金黃色T恤
+            pantsColor: 0x8b4513, // 棕色短裙
+            role: '美宣長',
+            rotation: -Math.PI / 2,
+            dialogues: [
+                "嗨嗨！我是恩若，負責美宣設計",
+                "你有追蹤我們的社群媒體嗎？記得按讚分享喔！",
+                "下次有校外比賽我會負責報名參加",
+                "我最擅長跟其他社團建立友好關係",
+                "想要更了解我們社團就來找我聊天吧！",
+                "高雄是個美麗的城市真的! 有機會一定要來玩"
+            ],
+            gender: 'female'
+        });
+
+        // 旻偉 - 男性幹部（休閒風格）
+        this.addNPC({
+            name: '旻偉',
+            position: new THREE.Vector3(9, 0, 5),
+            shirtColor: 0x708090, // 灰藍色polo衫
+            pantsColor: 0x556b2f, // 軍綠色休閒褲
+            role: '器材長',
+            rotation: -Math.PI / 2,
+            dialogues: [
+                "我是旻偉，負責社團的總務和設備管理",
+                "所有的調酒器材都是我在保養維護的",
+                "預算規劃和採購也都是我的工作",
+                "雖然我調酒技術普通，但管理能力還不錯",
+                "需要什麼設備或材料都可以跟我說",
+                "社團能順利運作，總務工作很重要呢",
+                "陳昱嘉的線性代數好課推推"
+            ],
+            gender: 'male'
+        });
         
         // 創建音箱互動物件
         this.createAmpInteraction();
@@ -255,28 +332,59 @@ export class NPCManager {
     
     addNPC(config) {
         const npc = new THREE.Group();
-
-        // === 軀幹（白襯衫 + 黑背心）===
+        const isFemale = config.gender === 'female';
+        
+        // 根據性別調整體型參數
+        const shoulderWidth = isFemale ? 0.35 : 0.4;
+        
+        // === 軀幹設計根據性別和角色身份調整 ===
+        let shirtGeometry, vestGeometry = null;
+        
+        if (isFemale) {
+            // 女性上衣（比較修身）
+            shirtGeometry = new THREE.CylinderGeometry(0.35, 0.4, 0.9, 16);
+        } else if (config.role.includes('部長') && !config.role.includes('創')) {
+            // 男性幹部休閒裝
+            shirtGeometry = new THREE.CylinderGeometry(0.38, 0.42, 0.95, 16);
+        } else {
+            // 原本的調酒師裝扮
+            shirtGeometry = new THREE.CylinderGeometry(0.4, 0.45, 1.0, 16);
+            vestGeometry = new THREE.CylinderGeometry(0.42, 0.47, 1.0, 16, 1, true);
+        }
+        
         const shirt = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.4, 0.45, 1.0, 16),
-            new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 })
+            shirtGeometry,
+            new THREE.MeshStandardMaterial({ color: config.shirtColor, roughness: 0.8 })
         );
         shirt.position.y = 1.2;
         shirt.castShadow = true;
 
-        const vest = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.42, 0.47, 1.0, 16, 1, true),
-            new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6 })
-        );
-        vest.position.y = 1.2;
-        vest.castShadow = true;
-
-        // === 褲子 ===
+        // 只有調酒師才穿背心
+        let vest = null;
+        if (vestGeometry) {
+            vest = new THREE.Mesh(
+                vestGeometry,
+                new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6 })
+            );
+            vest.position.y = 1.2;
+            vest.castShadow = true;
+        }
+        
+        // === 褲子/裙子 ===
+        let bottomGeometry;
+        if (isFemale && config.pantsColor === 0x8b4513) {
+            // 短裙設計（恩若）
+            bottomGeometry = new THREE.CylinderGeometry(0.45, 0.35, 0.6, 16);
+        } else {
+            // 一般褲子
+            bottomGeometry = new THREE.CylinderGeometry(0.35, 0.35, 1.0, 16);
+        }
+        
         const pants = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.35, 0.35, 1.0, 16),
+            bottomGeometry,
             new THREE.MeshStandardMaterial({ color: config.pantsColor, roughness: 0.9 })
         );
-        pants.position.y = 0.2;
+        pants.position.y = (isFemale && config.pantsColor === 0x8b4513) ? 0.4 : 0.2;
         pants.castShadow = true;
 
         // === 腿 ===
@@ -295,18 +403,19 @@ export class NPCManager {
         rightLeg.castShadow = true;
 
         // === 手臂 ===
+        const armDistance = shoulderWidth + 0.15;
         const leftArm = new THREE.Mesh(
             new THREE.CylinderGeometry(0.12, 0.12, 0.8, 12),
             new THREE.MeshStandardMaterial({ color: 0xfdbcb4 })
         );
-        leftArm.position.set(-0.55, 1.2, 0);
+        leftArm.position.set(-armDistance, 1.2, 0);
         leftArm.castShadow = true;
 
         const rightArm = new THREE.Mesh(
             new THREE.CylinderGeometry(0.12, 0.12, 0.8, 12),
             new THREE.MeshStandardMaterial({ color: 0xfdbcb4 })
         );
-        rightArm.position.set(0.55, 1.2, 0);
+        rightArm.position.set(armDistance, 1.2, 0);
         rightArm.castShadow = true;
 
         // === 頭部 ===
@@ -317,36 +426,51 @@ export class NPCManager {
         head.position.y = 2.1;
         head.castShadow = true;
 
-        // === 頭髮（簡單的蓋頂）===
+        // === 頭髮（根據性別調整）===
+        let hairGeometry;
+        if (isFemale) {
+            // 女性長髮
+            hairGeometry = new THREE.SphereGeometry(0.38, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.4);
+        } else {
+            // 男性短髮
+            hairGeometry = new THREE.SphereGeometry(0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.35);
+        }
+        
         const hair = new THREE.Mesh(
-            new THREE.SphereGeometry(0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+            hairGeometry,
             new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.7 })
         );
         hair.position.y = 2.1;
         hair.castShadow = true;
 
-        // === 領結 ===
-        const bowTie = new THREE.Mesh(
-            new THREE.BoxGeometry(0.3, 0.1, 0.05),
-            new THREE.MeshStandardMaterial({ color: 0x990000, metalness: 0.2 })
-        );
-        bowTie.position.set(0, 1.7, 0.35);
+        // === 領結/領帶（只有正式場合才戴）===
+        let accessory = null;
+        if (!isFemale && vestGeometry) {
+            accessory = new THREE.Mesh(
+                new THREE.BoxGeometry(0.3, 0.1, 0.05),
+                new THREE.MeshStandardMaterial({ color: 0x990000, metalness: 0.2 })
+            );
+            accessory.position.set(0, 1.7, 0.35);
+        }
 
-        // === 酒杯（右手）===
-        const glassCup = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.1, 0.12, 0.3, 16),
-            new THREE.MeshPhysicalMaterial({ 
-                color: 0xffffff, 
-                transparent: true, 
-                opacity: 0.4, 
-                roughness: 0, 
-                metalness: 0,
-                transmission: 1.0, // 玻璃效果
-                ior: 1.5
-            })
-        );
-        glassCup.position.set(0.75, 1.2, 0);
-        glassCup.rotation.x = Math.PI / 8;
+        // === 手持物品（只有調酒師拿酒杯）===
+        let handItem = null;
+        if (vestGeometry) {
+            handItem = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.1, 0.12, 0.3, 16),
+                new THREE.MeshPhysicalMaterial({ 
+                    color: 0xffffff, 
+                    transparent: true, 
+                    opacity: 0.4, 
+                    roughness: 0, 
+                    metalness: 0,
+                    transmission: 1.0,
+                    ior: 1.5
+                })
+            );
+            handItem.position.set(0.75, 1.2, 0);
+            handItem.rotation.x = Math.PI / 8;
+        }
 
         // === 臉部（眼睛 + 嘴巴）===
         const faceGroup = new THREE.Group();
@@ -381,7 +505,7 @@ export class NPCManager {
 
         // === 組裝 ===
         npc.add(shirt);
-        npc.add(vest);
+        if (vest) npc.add(vest);
         npc.add(pants);
         npc.add(leftLeg);
         npc.add(rightLeg);
@@ -389,12 +513,16 @@ export class NPCManager {
         npc.add(rightArm);
         npc.add(head);
         npc.add(hair);
-        npc.add(bowTie);
-        npc.add(glassCup);
+        if (accessory) npc.add(accessory);
+        if (handItem) npc.add(handItem);
         npc.add(faceGroup);
         npc.add(nameTag);
 
         npc.position.copy(config.position);
+        // 如果有設定旋轉角度，就應用旋轉
+        if (config.rotation !== undefined) {
+            npc.rotation.y = config.rotation;
+        }
 
         // 儲存資料
         npc.userData = {
@@ -403,6 +531,7 @@ export class NPCManager {
             dialogues: config.dialogues,
             currentDialogue: 0,
             originalY: config.position.y,
+            baseRotation: config.rotation || 0, // 新增：儲存基礎旋轉角度
             nameTagSprite: nameTag.children[0]
         };
 
@@ -702,14 +831,15 @@ export class NPCManager {
     update(deltaTime) {
         // 讓 NPC 有簡單的動畫
         this.npcs.forEach((npc, index) => {
-            // 輕微的上下浮動
-            const floatY = Math.sin(Date.now() * 0.001 + index) * 0.02;
-            npc.position.y = npc.userData.originalY + floatY;
-            
-            // 輕微的左右搖擺
-            npc.rotation.y = Math.sin(Date.now() * 0.0008 + index * 2) * 0.05;
-            
-            // 讓名字標籤始終面向相機（Sprite 會自動面向相機）
+        // 輕微的上下浮動
+        const floatY = Math.sin(Date.now() * 0.001 + index) * 0.02;
+        npc.position.y = npc.userData.originalY + floatY;
+        
+        // 輕微的左右搖擺（保留原始旋轉角度）
+        const baseRotation = npc.userData.baseRotation || 0; // 獲取基礎旋轉角度
+        const swayAmount = Math.sin(Date.now() * 0.0008 + index * 2) * 0.05;
+        npc.rotation.y = baseRotation + swayAmount;
+        // 讓名字標籤始終面向相機（Sprite 會自動面向相機）
         });
     }
 }
