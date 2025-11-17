@@ -34,6 +34,16 @@ export default class CocktailSystem {
 
         // 酒類資料庫
         this.liquorDatabase = this.initLiquorDatabase();
+
+        // UI 元素：倒酒進度條
+        this.pourProgressPanel = document.getElementById('pour-progress-panel');
+        this.containerVolumeBar = document.getElementById('container-volume-bar');
+        this.containerVolumeText = document.getElementById('container-volume-text');
+        this.pourRateBar = document.getElementById('pour-rate-bar');
+        this.pourRateText = document.getElementById('pour-rate-text');
+
+        // 倒酒速度（ml/秒）
+        this.pourRate = 50;
     }
 
     /**
@@ -207,6 +217,47 @@ export default class CocktailSystem {
             category: 'liqueur'
         });
 
+        // === 利口酒和香艾酒類 ===
+        database.set('vermouth_dry', {
+            name: '不甜香艾酒',
+            displayName: 'Dry Vermouth',
+            color: 0xe8e8d0,
+            alcoholContent: 18,
+            category: 'fortified_wine'
+        });
+
+        database.set('vermouth_sweet', {
+            name: '甜香艾酒',
+            displayName: 'Sweet Vermouth',
+            color: 0x8b4513,
+            alcoholContent: 18,
+            category: 'fortified_wine'
+        });
+
+        database.set('campari', {
+            name: '金巴利',
+            displayName: 'Campari',
+            color: 0xdc143c,
+            alcoholContent: 25,
+            category: 'liqueur'
+        });
+
+        database.set('triple_sec', {
+            name: '橙皮酒',
+            displayName: 'Triple Sec',
+            color: 0xffa500,
+            alcoholContent: 40,
+            category: 'liqueur'
+        });
+
+        database.set('coconut_cream', {
+            name: '椰漿',
+            displayName: 'Coconut Cream',
+            color: 0xfffaf0,
+            alcoholContent: 0,
+            category: 'mixer'
+        });
+
         return database;
     }
 
@@ -331,6 +382,9 @@ export default class CocktailSystem {
             // 更新視覺效果
             this.updateLiquidVisual(targetContainer);
 
+            // 更新倒酒進度條 UI
+            this.updatePourProgressUI(targetContainer, amountPoured);
+
             // 創建倒酒粒子效果和動畫
             if (!this.isPouringActive) {
                 this.createPourParticles(bottle, targetContainer);
@@ -362,6 +416,44 @@ export default class CocktailSystem {
         this.currentPouringBottle = null;
         this.originalBottleRotation = null;
         this.removePourParticles();
+
+        // 隱藏倒酒進度條
+        if (this.pourProgressPanel) {
+            this.pourProgressPanel.style.display = 'none';
+        }
+    }
+
+    /**
+     * 更新倒酒進度條 UI
+     * @param {THREE.Object3D} targetContainer - 目標容器
+     * @param {number} amountPoured - 倒出的量（ml）
+     */
+    updatePourProgressUI(targetContainer, amountPoured) {
+        if (!this.pourProgressPanel) return;
+
+        const contents = this.containerContents.get(targetContainer);
+        if (!contents) return;
+
+        // 顯示進度條面板
+        this.pourProgressPanel.style.display = 'block';
+
+        // 更新杯子容量進度條
+        const volumePercentage = (contents.volume / contents.maxVolume) * 100;
+        if (this.containerVolumeBar) {
+            this.containerVolumeBar.style.width = `${Math.min(volumePercentage, 100)}%`;
+        }
+        if (this.containerVolumeText) {
+            this.containerVolumeText.textContent = `${Math.round(contents.volume)}/${contents.maxVolume}ml`;
+        }
+
+        // 更新倒出量進度條（倒酒速度 50ml/s，顯示為百分比）
+        const pourRatePercentage = (this.pourRate / 100) * 100; // 相對於最大倒酒速度
+        if (this.pourRateBar) {
+            this.pourRateBar.style.width = `${pourRatePercentage}%`;
+        }
+        if (this.pourRateText) {
+            this.pourRateText.textContent = `${this.pourRate}ml/s`;
+        }
     }
 
     /**
@@ -595,9 +687,102 @@ export default class CocktailSystem {
      * @returns {string} 雞尾酒名稱
      */
     identifyCocktail(contents) {
-        const types = contents.ingredients.map(ing => ing.type);
+        const ingredients = contents.ingredients;
+        const types = ingredients.map(ing => ing.type);
 
-        // 簡單的配方匹配
+        // 獲取每種材料的量
+        const getAmount = (type) => {
+            const ing = ingredients.find(i => i.type === type);
+            return ing ? ing.amount : 0;
+        };
+
+        // === 經典調酒識別（精確配方） ===
+
+        // Martini（馬丁尼）：Gin + Dry Vermouth (2:1 到 3:1)
+        // 可以加少量檸檬汁或糖漿
+        if (types.includes('gin') && types.includes('vermouth_dry')) {
+            const ginAmount = getAmount('gin');
+            const vermouthAmount = getAmount('vermouth_dry');
+            const ratio = ginAmount / vermouthAmount;
+
+            // 檢查是否有其他不允許的基酒或果汁
+            const hasOtherSpirits = types.some(t =>
+                ['vodka', 'rum', 'whiskey', 'tequila', 'brandy', 'campari'].includes(t)
+            );
+            const hasJuice = types.some(t =>
+                ['orange_juice', 'cranberry_juice', 'pineapple_juice', 'tomato_juice', 'grapefruit_juice'].includes(t)
+            );
+
+            // 允許的額外材料
+            const allowedExtras = ['lemon_juice', 'lime_juice', 'simple_syrup'];
+            const hasOnlyAllowedExtras = types.filter(t =>
+                t !== 'gin' && t !== 'vermouth_dry'
+            ).every(t => allowedExtras.includes(t));
+
+            if (!hasOtherSpirits && !hasJuice && hasOnlyAllowedExtras && ratio >= 2 && ratio <= 3) {
+                return '馬丁尼 (Martini) ✨';
+            }
+        }
+
+        // Vodka Martini（伏特加馬丁尼）：Vodka + Dry Vermouth
+        if (types.includes('vodka') && types.includes('vermouth_dry')) {
+            const vodkaAmount = getAmount('vodka');
+            const vermouthAmount = getAmount('vermouth_dry');
+            const ratio = vodkaAmount / vermouthAmount;
+
+            const hasOtherSpirits = types.some(t =>
+                ['gin', 'rum', 'whiskey', 'tequila', 'brandy', 'campari'].includes(t)
+            );
+
+            if (!hasOtherSpirits && ratio >= 2 && ratio <= 3) {
+                return '伏特加馬丁尼 (Vodka Martini) ✨';
+            }
+        }
+
+        // Negroni（內格羅尼）：Gin + Campari + Sweet Vermouth (1:1:1)
+        if (types.includes('gin') && types.includes('campari') && types.includes('vermouth_sweet')) {
+            const ginAmount = getAmount('gin');
+            const campariAmount = getAmount('campari');
+            const vermouthAmount = getAmount('vermouth_sweet');
+
+            // 檢查比例是否接近 1:1:1（允許 ±30% 誤差）
+            const avgAmount = (ginAmount + campariAmount + vermouthAmount) / 3;
+            const isBalanced =
+                Math.abs(ginAmount - avgAmount) / avgAmount < 0.3 &&
+                Math.abs(campariAmount - avgAmount) / avgAmount < 0.3 &&
+                Math.abs(vermouthAmount - avgAmount) / avgAmount < 0.3;
+
+            if (isBalanced) {
+                return '內格羅尼 (Negroni) ✨';
+            }
+        }
+
+        // Margarita（瑪格麗特）：Tequila + Triple Sec + Lime Juice
+        if (types.includes('tequila') && types.includes('triple_sec') && types.includes('lime_juice')) {
+            return '瑪格麗特 (Margarita) ✨';
+        }
+
+        // Daiquiri（黛克瑞）：Rum + Lime Juice + Simple Syrup
+        if (types.includes('rum') && types.includes('lime_juice') && types.includes('simple_syrup')) {
+            return '黛克瑞 (Daiquiri) ✨';
+        }
+
+        // Piña Colada（椰林風情）：Rum + Pineapple Juice + Coconut Cream
+        if (types.includes('rum') && types.includes('pineapple_juice') && types.includes('coconut_cream')) {
+            return '椰林風情 (Piña Colada) ✨';
+        }
+
+        // Cosmopolitan（柯夢波丹）：Vodka + Triple Sec + Cranberry Juice + Lime Juice
+        if (types.includes('vodka') && types.includes('triple_sec') && types.includes('cranberry_juice') && types.includes('lime_juice')) {
+            return '柯夢波丹 (Cosmopolitan) ✨';
+        }
+
+        // Mojito（莫希托）：Rum + Lime Juice + Simple Syrup (+ optional soda water)
+        if (types.includes('rum') && types.includes('lime_juice') && types.includes('simple_syrup')) {
+            return '莫希托 (Mojito) ✨';
+        }
+
+        // === 簡單配方匹配 ===
         if (types.includes('vodka') && types.length === 1) {
             return '伏特加純飲';
         } else if (types.includes('gin') && types.length === 1) {
