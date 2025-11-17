@@ -14,6 +14,15 @@ export default class CocktailSystem {
         // 倒酒狀態
         this.isPouringActive = false;
         this.pouringStartTime = 0;
+        this.currentPouringBottle = null; // 當前倒酒的酒瓶
+        this.originalBottleRotation = null; // 酒瓶原始旋轉
+
+        // 喝酒狀態
+        this.isDrinking = false;
+        this.drinkingStartTime = 0;
+        this.currentDrinkingGlass = null; // 當前喝酒的杯子
+        this.originalGlassPosition = null; // 杯子原始位置
+        this.lastDrinkInfo = null; // 最後一次喝酒的資訊
 
         // 搖酒狀態
         this.isShakingActive = false;
@@ -294,15 +303,25 @@ export default class CocktailSystem {
         const pourRate = 50;
         const amountPoured = pourRate * deltaTime;
 
-        // 添加酒水
+        // 添加酒水（合併同類材料）
         const liquor = this.liquorDatabase.get(liquorType);
         if (liquor) {
-            contents.ingredients.push({
-                type: liquorType,
-                name: liquor.name,
-                amount: amountPoured,
-                color: liquor.color
-            });
+            // 檢查是否已經有相同類型的材料
+            const existingIngredient = contents.ingredients.find(ing => ing.type === liquorType);
+
+            if (existingIngredient) {
+                // 如果已存在，累加數量
+                existingIngredient.amount += amountPoured;
+            } else {
+                // 如果不存在，添加新材料
+                contents.ingredients.push({
+                    type: liquorType,
+                    name: liquor.name,
+                    displayName: liquor.displayName || liquor.name,
+                    amount: amountPoured,
+                    color: liquor.color
+                });
+            }
 
             contents.volume += amountPoured;
 
@@ -312,10 +331,20 @@ export default class CocktailSystem {
             // 更新視覺效果
             this.updateLiquidVisual(targetContainer);
 
-            // 創建倒酒粒子效果
+            // 創建倒酒粒子效果和動畫
             if (!this.isPouringActive) {
                 this.createPourParticles(bottle, targetContainer);
                 this.isPouringActive = true;
+                this.currentPouringBottle = bottle;
+                this.originalBottleRotation = bottle.rotation.clone();
+            }
+
+            // 倒酒動畫：傾斜酒瓶
+            if (this.currentPouringBottle) {
+                const targetRotation = Math.PI / 3; // 60度傾斜
+                const currentZ = this.currentPouringBottle.rotation.z;
+                const lerpSpeed = 3.0 * deltaTime;
+                this.currentPouringBottle.rotation.z += (targetRotation - currentZ) * lerpSpeed;
             }
         }
     }
@@ -324,7 +353,14 @@ export default class CocktailSystem {
      * 停止倒酒
      */
     stopPouring() {
+        // 恢復酒瓶旋轉
+        if (this.currentPouringBottle && this.originalBottleRotation) {
+            this.currentPouringBottle.rotation.copy(this.originalBottleRotation);
+        }
+
         this.isPouringActive = false;
+        this.currentPouringBottle = null;
+        this.originalBottleRotation = null;
         this.removePourParticles();
     }
 
@@ -461,16 +497,26 @@ export default class CocktailSystem {
     /**
      * 喝掉飲品
      * @param {THREE.Object3D} container - 容器
+     * @param {boolean} startAnimation - 是否開始喝酒動畫
      * @returns {Object} 飲品資訊
      */
-    drink(container) {
+    drink(container, startAnimation = true) {
         const contents = this.containerContents.get(container);
         if (!contents || contents.volume === 0) {
             console.log('杯子是空的！');
             return null;
         }
 
-        // 獲取飲品資訊
+        if (startAnimation && !this.isDrinking) {
+            // 開始喝酒動畫
+            this.isDrinking = true;
+            this.drinkingStartTime = Date.now();
+            this.currentDrinkingGlass = container;
+            this.originalGlassPosition = container.position.clone();
+            return null; // 動畫中先不返回資訊
+        }
+
+        // 獲取飲品資訊（非動畫模式）
         const drinkInfo = {
             volume: contents.volume,
             ingredients: [...contents.ingredients],
@@ -488,6 +534,59 @@ export default class CocktailSystem {
 
         console.log(`你喝了 ${drinkInfo.name}！`);
         return drinkInfo;
+    }
+
+    /**
+     * 取得並清除最後一次喝酒的資訊
+     * @returns {Object|null} 飲品資訊
+     */
+    getLastDrinkInfo() {
+        const info = this.lastDrinkInfo;
+        this.lastDrinkInfo = null;
+        return info;
+    }
+
+    /**
+     * 更新喝酒動畫
+     */
+    updateDrinkingAnimation() {
+        if (!this.isDrinking || !this.currentDrinkingGlass) return;
+
+        const elapsedTime = (Date.now() - this.drinkingStartTime) / 1000;
+
+        if (elapsedTime < 1.0) {
+            // 動畫進行中：將杯子向上移動並稍微傾斜
+            const progress = elapsedTime;
+            this.currentDrinkingGlass.position.y = this.originalGlassPosition.y + 0.2 * progress;
+            this.currentDrinkingGlass.rotation.x = -Math.PI / 6 * progress; // 傾斜30度
+        } else {
+            // 動畫結束：重置位置並實際消耗飲品
+            this.currentDrinkingGlass.position.copy(this.originalGlassPosition);
+            this.currentDrinkingGlass.rotation.x = 0;
+
+            // 實際消耗飲品
+            const contents = this.containerContents.get(this.currentDrinkingGlass);
+            if (contents && contents.volume > 0) {
+                const drinkInfo = {
+                    volume: contents.volume,
+                    ingredients: [...contents.ingredients],
+                    color: contents.color,
+                    name: this.identifyCocktail(contents)
+                };
+
+                // 清空容器
+                contents.ingredients = [];
+                contents.volume = 0;
+                contents.color = 0xffffff;
+                this.updateLiquidVisual(this.currentDrinkingGlass);
+
+                // 儲存飲品資訊供外部使用
+                this.lastDrinkInfo = drinkInfo;
+            }
+
+            this.isDrinking = false;
+            this.currentDrinkingGlass = null;
+        }
     }
 
     /**
@@ -662,5 +761,8 @@ export default class CocktailSystem {
                 particleSystem.geometry.attributes.position.needsUpdate = true;
             }
         }
+
+        // 更新喝酒動畫
+        this.updateDrinkingAnimation();
     }
 }
