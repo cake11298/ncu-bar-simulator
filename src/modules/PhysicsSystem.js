@@ -108,13 +108,12 @@ export default class PhysicsSystem {
 
         body.addShape(shape);
 
-        // 旋轉形狀以匹配 Three.js 坐標系
-        const quaternion = new CANNON.Quaternion();
-        quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI / 2);
-        body.quaternion.copy(quaternion);
+        // 不旋轉形狀 - 讓圓柱體保持垂直站立
+        // （移除了之前的 Math.PI / 2 旋轉）
 
-        // 設置初始位置
+        // 設置初始位置和旋轉（從 mesh 複製）
         body.position.copy(mesh.position);
+        body.quaternion.copy(mesh.quaternion);
 
         this.world.addBody(body);
         this.physicsObjects.set(mesh, body);
@@ -261,15 +260,56 @@ export default class PhysicsSystem {
      * 凍結物體位置（放回酒牆時使用）
      * @param {THREE.Object3D} mesh - Three.js 網格
      * @param {THREE.Vector3} position - 目標位置
+     * @param {THREE.Quaternion} rotation - 目標旋轉（可選，默認為單位旋轉）
      */
-    freezeBodyAt(mesh, position) {
+    freezeBodyAt(mesh, position, rotation = null) {
         const body = this.physicsObjects.get(mesh);
         if (body) {
             body.type = CANNON.Body.STATIC;
             body.position.set(position.x, position.y, position.z);
+
+            // 重置旋轉為垂直站立（單位四元數）
+            if (rotation) {
+                body.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+            } else {
+                body.quaternion.set(0, 0, 0, 1); // 單位四元數（無旋轉）
+            }
+
             body.velocity.setZero();
             body.angularVelocity.setZero();
+
+            // 同步 Three.js 網格
+            mesh.position.copy(body.position);
+            mesh.quaternion.copy(body.quaternion);
         }
+    }
+
+    /**
+     * 添加靜態碰撞體（用於環境物體如吧台、牆壁）
+     * @param {THREE.Vector3} position - 位置
+     * @param {THREE.Vector3} size - 尺寸
+     * @param {THREE.Quaternion} rotation - 旋轉（可選）
+     * @returns {CANNON.Body}
+     */
+    addStaticBox(position, size, rotation = null) {
+        const shape = new CANNON.Box(
+            new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)
+        );
+
+        const body = new CANNON.Body({
+            mass: 0, // 靜態物體
+            material: this.floorMaterial
+        });
+
+        body.addShape(shape);
+        body.position.set(position.x, position.y, position.z);
+
+        if (rotation) {
+            body.quaternion.copy(rotation);
+        }
+
+        this.world.addBody(body);
+        return body;
     }
 
     /**

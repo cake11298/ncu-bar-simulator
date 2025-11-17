@@ -34,60 +34,168 @@ export default class CocktailSystem {
     initLiquorDatabase() {
         const database = new Map();
 
+        // === 六大基酒 ===
         database.set('vodka', {
             name: '伏特加',
+            displayName: 'Vodka',
             color: 0xf0f0f0,
             alcoholContent: 40,
-            category: 'spirit'
-        });
-
-        database.set('rum', {
-            name: '蘭姆酒',
-            color: 0xd4a574,
-            alcoholContent: 40,
-            category: 'spirit'
+            category: 'base_spirit'
         });
 
         database.set('gin', {
             name: '琴酒',
+            displayName: 'Gin',
             color: 0xe8f4f8,
             alcoholContent: 40,
-            category: 'spirit'
+            category: 'base_spirit'
+        });
+
+        database.set('rum', {
+            name: '蘭姆酒',
+            displayName: 'Rum',
+            color: 0xd4a574,
+            alcoholContent: 40,
+            category: 'base_spirit'
         });
 
         database.set('whiskey', {
             name: '威士忌',
+            displayName: 'Whiskey',
             color: 0xb87333,
             alcoholContent: 40,
-            category: 'spirit'
+            category: 'base_spirit'
         });
 
         database.set('tequila', {
             name: '龍舌蘭',
+            displayName: 'Tequila',
             color: 0xf5deb3,
             alcoholContent: 40,
-            category: 'spirit'
+            category: 'base_spirit'
         });
 
         database.set('brandy', {
             name: '白蘭地',
+            displayName: 'Brandy',
             color: 0x8b4513,
             alcoholContent: 40,
-            category: 'spirit'
+            category: 'base_spirit'
+        });
+
+        // === 調味料 ===
+        database.set('lemon_juice', {
+            name: '檸檬汁',
+            displayName: 'Lemon Juice',
+            color: 0xfff44f,
+            alcoholContent: 0,
+            category: 'mixer'
+        });
+
+        database.set('lime_juice', {
+            name: '萊姆汁',
+            displayName: 'Lime Juice',
+            color: 0x32cd32,
+            alcoholContent: 0,
+            category: 'mixer'
+        });
+
+        database.set('simple_syrup', {
+            name: '糖漿',
+            displayName: 'Simple Syrup',
+            color: 0xffe4b5,
+            alcoholContent: 0,
+            category: 'mixer'
+        });
+
+        database.set('grenadine', {
+            name: '紅石榴糖漿',
+            displayName: 'Grenadine',
+            color: 0xff0000,
+            alcoholContent: 0,
+            category: 'mixer'
+        });
+
+        database.set('angostura_bitters', {
+            name: '安格仕苦精',
+            displayName: 'Angostura Bitters',
+            color: 0x8b0000,
+            alcoholContent: 44.7,
+            category: 'mixer'
+        });
+
+        // === 果汁類 ===
+        database.set('orange_juice', {
+            name: '柳橙汁',
+            displayName: 'Orange Juice',
+            color: 0xffa500,
+            alcoholContent: 0,
+            category: 'juice'
+        });
+
+        database.set('pineapple_juice', {
+            name: '鳳梨汁',
+            displayName: 'Pineapple Juice',
+            color: 0xffeb3b,
+            alcoholContent: 0,
+            category: 'juice'
+        });
+
+        database.set('cranberry_juice', {
+            name: '蔓越莓汁',
+            displayName: 'Cranberry Juice',
+            color: 0xdc143c,
+            alcoholContent: 0,
+            category: 'juice'
+        });
+
+        database.set('tomato_juice', {
+            name: '番茄汁',
+            displayName: 'Tomato Juice',
+            color: 0xff6347,
+            alcoholContent: 0,
+            category: 'juice'
+        });
+
+        database.set('grapefruit_juice', {
+            name: '葡萄柚汁',
+            displayName: 'Grapefruit Juice',
+            color: 0xff69b4,
+            alcoholContent: 0,
+            category: 'juice'
+        });
+
+        // === 其他常見材料 ===
+        database.set('soda_water', {
+            name: '蘇打水',
+            displayName: 'Soda Water',
+            color: 0xe0ffff,
+            alcoholContent: 0,
+            category: 'mixer'
+        });
+
+        database.set('tonic_water', {
+            name: '通寧水',
+            displayName: 'Tonic Water',
+            color: 0xf0ffff,
+            alcoholContent: 0,
+            category: 'mixer'
+        });
+
+        database.set('cola', {
+            name: '可樂',
+            displayName: 'Cola',
+            color: 0x3e2723,
+            alcoholContent: 0,
+            category: 'mixer'
         });
 
         database.set('liqueur', {
             name: '利口酒',
+            displayName: 'Liqueur',
             color: 0xff6b9d,
             alcoholContent: 20,
             category: 'liqueur'
-        });
-
-        database.set('beer', {
-            name: '啤酒',
-            color: 0xffd700,
-            alcoholContent: 5,
-            category: 'beer'
         });
 
         return database;
@@ -479,6 +587,56 @@ export default class CocktailSystem {
                 description: '墨西哥風味雞尾酒'
             }
         ];
+    }
+
+    /**
+     * 顯示容器成分信息（UI）
+     * @param {THREE.Object3D} container - 容器
+     */
+    showContainerInfo(container) {
+        const contents = this.containerContents.get(container);
+        const infoDiv = document.getElementById('container-info');
+
+        if (!contents || !infoDiv) return;
+
+        if (contents.volume > 0) {
+            // 構建成分列表
+            const ingredientListHTML = contents.ingredients.map(ing => {
+                const liquor = this.liquorDatabase.get(ing.type);
+                return `
+                    <div class="ingredient-item">
+                        <span class="ingredient-name">${liquor ? liquor.name : ing.name}</span>
+                        <span class="ingredient-amount">${Math.round(ing.amount)} ml</span>
+                    </div>
+                `;
+            }).join('');
+
+            // 識別雞尾酒
+            const cocktailName = this.identifyCocktail(contents);
+
+            infoDiv.innerHTML = `
+                <h3>${cocktailName}</h3>
+                <div class="ingredient-list">
+                    ${ingredientListHTML}
+                </div>
+                <div class="volume-info">
+                    總容量: ${Math.round(contents.volume)} / ${contents.maxVolume} ml
+                </div>
+            `;
+            infoDiv.classList.add('visible');
+        } else {
+            infoDiv.classList.remove('visible');
+        }
+    }
+
+    /**
+     * 隱藏容器成分信息
+     */
+    hideContainerInfo() {
+        const infoDiv = document.getElementById('container-info');
+        if (infoDiv) {
+            infoDiv.classList.remove('visible');
+        }
     }
 
     /**
