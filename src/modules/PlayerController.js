@@ -224,4 +224,10 @@ export class PlayerController {
             this.mousePressed.right = false;
         }
     }
+
+    // 通用按鍵檢測方法
+    isKeyPressed(key) {
+        key = key.toLowerCase();
+        return this.keys[key] && this.keyPressed[key];
+    }
 }
