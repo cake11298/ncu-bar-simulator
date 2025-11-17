@@ -157,8 +157,17 @@ class BarSimulator {
                     this.cocktailSystem.pour(heldObject, nearbyGlass, liquorType, deltaTime);
                 }
             } else if (heldType === 'shaker') {
-                // 搖酒
-                this.cocktailSystem.shake(heldObject, deltaTime);
+                // Shaker 邏輯：如果有內容且附近有容器，優先倒酒；否則搖酒
+                const shakerContents = this.cocktailSystem.containerContents.get(heldObject);
+                const nearbyContainer = this.findNearbyContainer(heldObject);
+
+                if (shakerContents && shakerContents.volume > 0 && nearbyContainer) {
+                    // 倒酒：從 shaker 倒入其他容器
+                    this.cocktailSystem.pourFromShaker(heldObject, nearbyContainer, deltaTime);
+                } else {
+                    // 搖酒
+                    this.cocktailSystem.shake(heldObject, deltaTime);
+                }
             }
         } else {
             // 停止倒酒/搖酒

@@ -325,8 +325,40 @@ export default class InteractionSystem {
         } else if (this.targetedObject) {
             const type = this.targetedObject.type;
             const distance = this.targetedObject.distance.toFixed(1);
+            const targetObj = this.targetedObject.object;
+            let itemName = this.getTypeName(type);
+            let additionalInfo = '';
 
-            return `按 E 拾取 ${this.getTypeName(type)} (${distance}m)`;
+            // 如果是酒瓶，顯示酒類名稱
+            if (type === 'bottle' && targetObj.userData.liquorType && this.cocktailSystem) {
+                const liquorType = targetObj.userData.liquorType;
+                const liquorInfo = this.cocktailSystem.liquorDatabase.get(liquorType);
+                if (liquorInfo) {
+                    itemName = liquorInfo.name;
+                    additionalInfo = ` (${liquorInfo.displayName})`;
+                }
+                // 如果有自定義顯示名稱（材料瓶）
+                if (targetObj.userData.displayName) {
+                    itemName = targetObj.userData.displayName;
+                }
+            }
+            // 如果是杯子或搖酒器，顯示內容物
+            else if ((type === 'glass' || type === 'shaker') && this.cocktailSystem) {
+                const contents = this.cocktailSystem.containerContents.get(targetObj);
+                if (contents && contents.volume > 0) {
+                    const ingredientNames = contents.ingredients
+                        .map(ing => {
+                            const info = this.cocktailSystem.liquorDatabase.get(ing.type);
+                            return info ? info.name : ing.type;
+                        })
+                        .join('+');
+                    additionalInfo = ` [${ingredientNames}, ${contents.volume.toFixed(0)}ml]`;
+                } else {
+                    additionalInfo = ' [空的]';
+                }
+            }
+
+            return `按 E 拾取 ${itemName}${additionalInfo} (${distance}m)`;
         }
 
         return '';
