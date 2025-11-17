@@ -74,9 +74,34 @@ body {
     font-weight: bold;
     animation: pulse 1.5s infinite;
     z-index: 100;
+    font-size: 14px;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
 }
 
-#interaction-hint.active {
+#interaction-hint.active,
+#interaction-hint.visible {
+    display: block;
+}
+
+/* 飲品訊息 */
+#drink-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, rgba(255, 105, 180, 0.95), rgba(255, 20, 147, 0.95));
+    color: white;
+    padding: 20px 30px;
+    border-radius: 15px;
+    display: none;
+    font-weight: bold;
+    font-size: 18px;
+    z-index: 150;
+    box-shadow: 0 10px 30px rgba(255, 105, 180, 0.6);
+    animation: drinkFadeIn 0.3s ease;
+}
+
+#drink-message.visible {
     display: block;
 }
 
@@ -108,11 +133,22 @@ body {
 }
 
 @keyframes pulse {
-    0%, 100% { 
-        transform: translateX(-50%) scale(1); 
+    0%, 100% {
+        transform: translateX(-50%) scale(1);
     }
-    50% { 
-        transform: translateX(-50%) scale(1.05); 
+    50% {
+        transform: translateX(-50%) scale(1.05);
+    }
+}
+
+@keyframes drinkFadeIn {
+    from {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
     }
 }
 

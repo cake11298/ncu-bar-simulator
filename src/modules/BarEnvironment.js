@@ -1,10 +1,71 @@
 import * as THREE from 'three';
 
 export class BarEnvironment {
-    constructor(scene) {
+    constructor(scene, interactionSystem = null, physicsSystem = null, cocktailSystem = null) {
         this.scene = scene;
         this.bottles = [];
+        this.interactables = []; // 可互動物品列表
+        this.glasses = []; // 杯子列表
+        this.barTools = {}; // 吧檯工具（shaker, jigger等）
+
+        // 系統引用
+        this.interaction = interactionSystem;
+        this.physics = physicsSystem;
+        this.cocktail = cocktailSystem;
+
         this.createEnvironment();
+
+        // 如果系統已初始化，設置互動物品
+        if (this.interaction && this.physics && this.cocktail) {
+            this.setupInteractables();
+        }
+    }
+
+    /**
+     * 設置可互動物品（在系統初始化後調用）
+     */
+    setupInteractables() {
+        // 註冊酒瓶為可互動物品
+        this.bottles.forEach((bottle, index) => {
+            const bottleType = this.getBottleTypeFromIndex(index);
+            this.interaction.registerInteractable(bottle, 'bottle', bottle.position.clone());
+
+            // 添加物理屬性
+            this.physics.addCylinderBody(bottle, 0.15, 0.18, 0.85, 0.5, 'glass');
+
+            // 標記酒類型
+            bottle.userData.liquorType = bottleType;
+        });
+
+        // 註冊杯子為可互動物品
+        this.glasses.forEach(glass => {
+            this.interaction.registerInteractable(glass, 'glass', glass.position.clone());
+            this.physics.addCylinderBody(glass, 0.13, 0.15, 0.6, 0.3, 'glass');
+
+            // 初始化杯子容器
+            this.cocktail.initContainer(glass, 300);
+        });
+
+        // 註冊 Shaker
+        if (this.barTools.shaker) {
+            this.interaction.registerInteractable(this.barTools.shaker, 'shaker', this.barTools.shaker.position.clone());
+            this.physics.addCylinderBody(this.barTools.shaker, 0.18, 0.22, 0.65, 0.6, 'metal');
+            this.cocktail.initContainer(this.barTools.shaker, 500);
+        }
+
+        // 註冊 Jigger
+        if (this.barTools.jigger) {
+            this.interaction.registerInteractable(this.barTools.jigger, 'jigger', this.barTools.jigger.position.clone());
+            this.physics.addCylinderBody(this.barTools.jigger, 0.09, 0.13, 0.18, 0.2);
+        }
+    }
+
+    /**
+     * 根據索引獲取酒類型
+     */
+    getBottleTypeFromIndex(index) {
+        const types = ['gin', 'vodka', 'whiskey', 'gin', 'whiskey', 'tequila', 'rum', 'vodka'];
+        return types[index % types.length];
     }
     
     createEnvironment() {
@@ -15,6 +76,7 @@ export class BarEnvironment {
         this.createBarStools();
         this.createBarDecoration();
         this.createPremiumBottleDisplay();
+        this.createDrinkingGlasses(); // 添加可互動的杯子
     }
     
     createFloor() {
@@ -441,6 +503,9 @@ export class BarEnvironment {
         shakerGroup.position.set(-1.8, 1.10, -2.2);
         shakerGroup.castShadow = true;
         this.scene.add(shakerGroup);
+
+        // 儲存 Shaker 引用
+        this.barTools.shaker = shakerGroup;
         
         // 精密雙頭量酒器
         this.createPrecisionJigger();
@@ -516,6 +581,9 @@ export class BarEnvironment {
         jiggerGroup.position.set(-0.6, 1.18, -2.1); // 提高位置避免穿模
         jiggerGroup.castShadow = true;
         this.scene.add(jiggerGroup);
+
+        // 儲存 Jigger 引用
+        this.barTools.jigger = jiggerGroup;
     }
     
     createProfessionalBarSpoon() {
@@ -1932,7 +2000,81 @@ export class BarEnvironment {
         
         displayCase.castShadow = true;
         displayCase.receiveShadow = true;
-        
+
         this.scene.add(displayCase);
+    }
+
+    /**
+     * 創建可互動的杯子
+     */
+    createDrinkingGlasses() {
+        // 在吧檯上放置 3 個杯子
+        const glassPositions = [
+            { x: 1.5, z: -2.3 },
+            { x: 2.5, z: -2.3 },
+            { x: 3.5, z: -2.3 }
+        ];
+
+        glassPositions.forEach(pos => {
+            const glass = this.createRealisticGlass();
+            glass.position.set(pos.x, 1.4, pos.z);
+            this.glasses.push(glass);
+            this.scene.add(glass);
+        });
+    }
+
+    /**
+     * 創建逼真的玻璃杯
+     */
+    createRealisticGlass() {
+        const glassGroup = new THREE.Group();
+
+        // 杯身（圓柱體）
+        const glassBody = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.13, 0.15, 0.6, 16, 1, true),
+            new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.2,
+                shininess: 150,
+                specular: 0xffffff,
+                reflectivity: 0.8
+            })
+        );
+        glassBody.position.y = 0.3;
+
+        // 杯底
+        const glassBottom = new THREE.Mesh(
+            new THREE.CircleGeometry(0.15, 16),
+            new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.3,
+                shininess: 150
+            })
+        );
+        glassBottom.rotation.x = -Math.PI / 2;
+        glassBottom.position.y = 0.01;
+
+        // 杯緣（厚度）
+        const glassRim = new THREE.Mesh(
+            new THREE.TorusGeometry(0.13, 0.02, 8, 16),
+            new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.3,
+                shininess: 150
+            })
+        );
+        glassRim.position.y = 0.6;
+        glassRim.rotation.x = Math.PI / 2;
+
+        glassGroup.add(glassBody);
+        glassGroup.add(glassBottom);
+        glassGroup.add(glassRim);
+        glassGroup.castShadow = true;
+        glassGroup.receiveShadow = true;
+
+        return glassGroup;
     }
 }
