@@ -32,6 +32,15 @@ export class BarEnvironment {
             new THREE.Vector3(12.2, 0.1, 2.2)  // 檯面尺寸
         );
 
+        // 添加酒架碰撞體（3層架子）
+        for (let i = 0; i < 3; i++) {
+            const shelfY = 1.5 + i * 1.2;
+            this.physics.addStaticBox(
+                new THREE.Vector3(0, shelfY, -8),     // 酒架位置
+                new THREE.Vector3(10, 0.2, 1)          // 酒架尺寸
+            );
+        }
+
         // 註冊酒瓶為可互動物品
         this.bottles.forEach((bottle, index) => {
             const bottleType = this.getBottleTypeFromIndex(index);

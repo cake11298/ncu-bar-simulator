@@ -32,6 +32,17 @@ export default class InteractionSystem {
 
         // 互動狀態
         this.isHolding = false;
+
+        // 調酒系統引用（用於獲取酒類名稱）
+        this.cocktailSystem = null;
+    }
+
+    /**
+     * 設定調酒系統引用
+     * @param {CocktailSystem} cocktailSystem - 調酒系統
+     */
+    setCocktailSystem(cocktailSystem) {
+        this.cocktailSystem = cocktailSystem;
     }
 
     /**
@@ -288,18 +299,28 @@ export default class InteractionSystem {
     getInteractionHint() {
         if (this.isHolding) {
             const type = this.getHeldObjectType();
+            let itemName = this.getTypeName(type);
+
+            // 如果是酒瓶，顯示酒類名稱
+            if (type === 'bottle' && this.heldObject.userData.liquorType && this.cocktailSystem) {
+                const liquorType = this.heldObject.userData.liquorType;
+                const liquorInfo = this.cocktailSystem.liquorDatabase.get(liquorType);
+                if (liquorInfo) {
+                    itemName = `酒瓶(${liquorInfo.name})`;
+                }
+            }
 
             switch(type) {
                 case 'bottle':
-                    return '按 Q 放下 | 按住滑鼠左鍵倒酒 | 按 R 放回酒牆';
+                    return `${itemName} | 按 Q 放下 | 按住滑鼠左鍵倒酒 | 按 R 放回酒牆`;
                 case 'glass':
-                    return '按 Q 放下 | 按滑鼠右鍵喝掉 | 按 R 放回原位';
+                    return `${itemName} | 按 Q 放下 | 按滑鼠右鍵喝掉 | 按 R 放回原位`;
                 case 'shaker':
-                    return '按 Q 放下 | 按住滑鼠左鍵搖晃 | 按 R 放回原位';
+                    return `${itemName} | 按 Q 放下 | 按住滑鼠左鍵搖晃 | 按 R 放回原位`;
                 case 'jigger':
-                    return '按 Q 放下 | 用於精確量酒 | 按 R 放回原位';
+                    return `${itemName} | 按 Q 放下 | 用於精確量酒 | 按 R 放回原位`;
                 default:
-                    return '按 Q 放下 | 按 R 放回原位';
+                    return `${itemName} | 按 Q 放下 | 按 R 放回原位`;
             }
         } else if (this.targetedObject) {
             const type = this.targetedObject.type;

@@ -47,6 +47,9 @@ class BarSimulator {
         this.interactionSystem = new InteractionSystem(this.camera, this.physicsSystem);
         this.cocktailSystem = new CocktailSystem(this.scene, this.interactionSystem);
 
+        // 設定調酒系統引用到互動系統（用於顯示酒類名稱）
+        this.interactionSystem.setCocktailSystem(this.cocktailSystem);
+
         // 載入環境（傳入系統引用）
         this.environment = new BarEnvironment(
             this.scene,
@@ -167,18 +170,22 @@ class BarSimulator {
             }
         }
 
-        // 滑鼠右鍵：喝酒
+        // 滑鼠右鍵：喝酒（開始動畫）
         const isRightPressed = this.playerController.isRightMousePressed();
         if (isRightPressed && !this.lastRightMouse && heldObject) {
             if (heldType === 'glass') {
-                const drinkInfo = this.cocktailSystem.drink(heldObject);
-                if (drinkInfo) {
-                    this.showDrinkMessage(drinkInfo);
-                }
+                // 開始喝酒動畫
+                this.cocktailSystem.drink(heldObject, true);
             }
             this.playerController.resetMouseButton('right');
         }
         this.lastRightMouse = isRightPressed;
+
+        // 檢查喝酒動畫是否完成並顯示訊息
+        const lastDrinkInfo = this.cocktailSystem.getLastDrinkInfo();
+        if (lastDrinkInfo) {
+            this.showDrinkMessage(lastDrinkInfo);
+        }
 
         // F 鍵：給附近的 NPC 喝酒
         const isGiveToNPCPressed = this.playerController.isKeyPressed('f');
@@ -187,8 +194,8 @@ class BarSimulator {
             if (nearbyNPC) {
                 const contents = this.cocktailSystem.containerContents.get(heldObject);
                 if (contents && contents.volume > 0) {
-                    // NPC喝酒並給予評分
-                    const drinkInfo = this.cocktailSystem.drink(heldObject);
+                    // NPC喝酒並給予評分（不使用動畫）
+                    const drinkInfo = this.cocktailSystem.drink(heldObject, false);
                     if (drinkInfo) {
                         this.npcManager.npcDrinkCocktail(nearbyNPC, drinkInfo);
                     }
