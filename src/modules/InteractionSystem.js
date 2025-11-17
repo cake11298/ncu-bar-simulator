@@ -154,10 +154,13 @@ export default class InteractionSystem {
             // 放回原位（酒牆）
             const originalPos = this.originalPositions.get(object);
             if (originalPos) {
+                // 重置旋轉為垂直站立
+                const upright = new THREE.Quaternion(0, 0, 0, 1);
+                object.quaternion.copy(upright);
                 object.position.copy(originalPos);
 
-                // 凍結在原位置（不受物理影響）
-                this.physics.freezeBodyAt(object, originalPos);
+                // 凍結在原位置（不受物理影響），並重置旋轉
+                this.physics.freezeBodyAt(object, originalPos, upright);
             }
         } else {
             // 放在當前位置（會掉落）

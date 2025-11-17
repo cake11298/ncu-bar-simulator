@@ -828,13 +828,189 @@ export class NPCManager {
         }
     }
     
+    /**
+     * NPC 喝酒互動系統
+     * @param {Object} npc - NPC 物件
+     * @param {Object} drinkInfo - 飲品資訊（從 cocktailSystem.drink() 返回）
+     * @returns {Object} { reaction: string, rating: number }
+     */
+    npcDrinkCocktail(npc, drinkInfo) {
+        if (!npc || !drinkInfo) return null;
+
+        const userData = npc.userData;
+        const npcName = userData.name;
+
+        // 計算評分（基於成分和酒精含量）
+        let rating = 5; // 基礎分
+        let reaction = '';
+
+        // 根據成分調整評分
+        const ingredientTypes = drinkInfo.ingredients.map(ing => ing.type);
+        const volume = drinkInfo.volume;
+
+        // 評分邏輯
+        if (volume < 30) {
+            rating -= 2;
+            reaction = '這...也太少了吧？';
+        } else if (volume > 200) {
+            rating += 1;
+            reaction = '哇！份量真足！';
+        }
+
+        // 成分多樣性
+        const uniqueIngredients = new Set(ingredientTypes);
+        if (uniqueIngredients.size >= 3) {
+            rating += 2;
+        }
+
+        // 黃正安的特殊反應
+        if (npcName === '正安') {
+            const reactions = [
+                '嗯...喝起來像黃曦樂調的呢！',
+                '這個味道...讓我想起曦樂的風格',
+                '感覺有曦樂的影子在裡面',
+                '是曦樂教你這樣調的嗎？'
+            ];
+            reaction = reactions[Math.floor(Math.random() * reactions.length)];
+            rating = Math.min(10, rating + Math.floor(Math.random() * 3));
+        }
+        // 其他幹部的隨機反應
+        else {
+            const positiveReactions = [
+                '哇！這調得不錯！',
+                '味道很棒呢！',
+                '嗯...有專業的感覺',
+                '這個配方很有創意！',
+                '我喜歡這個味道',
+                '調得真好！',
+                '完美的平衡！',
+                '真是令人驚艷的作品！'
+            ];
+
+            const neutralReactions = [
+                '還不錯啦',
+                '嗯...可以接受',
+                '味道普通',
+                '還有進步空間',
+                '中規中矩'
+            ];
+
+            const negativeReactions = [
+                '呃...這味道有點奇怪',
+                '可能需要再調整一下',
+                '嗯...不是我的菜',
+                '這個組合有點怪',
+                '下次可以試試別的配方'
+            ];
+
+            // 根據評分選擇反應
+            if (rating >= 8) {
+                reaction = positiveReactions[Math.floor(Math.random() * positiveReactions.length)];
+                rating += Math.floor(Math.random() * 2);
+            } else if (rating >= 5) {
+                reaction = neutralReactions[Math.floor(Math.random() * neutralReactions.length)];
+            } else {
+                reaction = negativeReactions[Math.floor(Math.random() * negativeReactions.length)];
+            }
+        }
+
+        // 特定NPC的特殊評論
+        if (npcName === 'Gustave') {
+            if (uniqueIngredients.size >= 4) {
+                reaction += ' 分子調酒的精髓就是創新！';
+                rating += 1;
+            }
+        } else if (npcName === 'Seaton') {
+            if (ingredientTypes.includes('whiskey')) {
+                reaction = '嘿！有威士忌，我喜歡！' + reaction;
+                rating += 2;
+            }
+        } else if (npcName === '瑜柔(宅魚)') {
+            reaction += ' 從化學角度來看，這個配方很有趣。';
+        } else if (npcName === '恩若') {
+            reaction += ' 顏色也很漂亮呢！';
+        } else if (npcName === '旻偉') {
+            reaction += ' 器材運用得不錯。';
+        }
+
+        // 限制評分範圍 1-10
+        rating = Math.max(1, Math.min(10, rating));
+
+        // 顯示反應對話
+        this.showDrinkReaction(npc, reaction, rating, drinkInfo.name);
+
+        return { reaction, rating };
+    }
+
+    /**
+     * 顯示NPC喝酒後的反應
+     * @param {Object} npc - NPC 物件
+     * @param {string} reaction - 反應文字
+     * @param {number} rating - 評分
+     * @param {string} drinkName - 飲品名稱
+     */
+    showDrinkReaction(npc, reaction, rating, drinkName) {
+        const userData = npc.userData;
+        const dialogueBox = document.getElementById('dialogue-box');
+        const characterName = document.getElementById('character-name');
+        const dialogueText = document.getElementById('dialogue-text');
+
+        if (!dialogueBox || !characterName || !dialogueText) return;
+
+        // 設置對話內容
+        characterName.textContent = `${userData.name} - ${userData.role}`;
+
+        // 評分星星
+        const stars = '⭐'.repeat(Math.round(rating / 2));
+
+        dialogueText.innerHTML = `
+            <div style="margin-bottom: 10px; color: #FFD700; font-size: 18px;">
+                品嚐了「${drinkName}」
+            </div>
+            <div style="margin-bottom: 8px;">
+                ${reaction}
+            </div>
+            <div style="margin-top: 12px; font-size: 20px;">
+                評分: ${stars} (${rating}/10)
+            </div>
+        `;
+
+        // 顯示對話框
+        dialogueBox.classList.remove('active');
+        dialogueBox.offsetHeight; // 強制重繪
+        dialogueBox.classList.add('active');
+
+        // 5秒後隱藏
+        setTimeout(() => {
+            dialogueBox.classList.remove('active');
+        }, 5000);
+    }
+
+    /**
+     * 檢查是否可以給NPC喝酒
+     * @param {THREE.Vector3} playerPos - 玩家位置
+     * @returns {Object|null} 最近的NPC
+     */
+    getNearbyNPC(playerPos) {
+        const interactionDistance = 2.5; // 互動距離
+
+        for (const npc of this.npcs) {
+            const distance = playerPos.distanceTo(npc.position);
+            if (distance < interactionDistance) {
+                return npc;
+            }
+        }
+
+        return null;
+    }
+
     update(deltaTime) {
         // 讓 NPC 有簡單的動畫
         this.npcs.forEach((npc, index) => {
         // 輕微的上下浮動
         const floatY = Math.sin(Date.now() * 0.001 + index) * 0.02;
         npc.position.y = npc.userData.originalY + floatY;
-        
+
         // 輕微的左右搖擺（保留原始旋轉角度）
         const baseRotation = npc.userData.baseRotation || 0; // 獲取基礎旋轉角度
         const swayAmount = Math.sin(Date.now() * 0.0008 + index * 2) * 0.05;

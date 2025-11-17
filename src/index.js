@@ -17,6 +17,7 @@ class BarSimulator {
         this.lastDrop = false;
         this.lastReturn = false;
         this.lastRightMouse = false;
+        this.lastGiveToNPC = false;
         this.init();
     }
     
@@ -99,12 +100,17 @@ class BarSimulator {
         const isDropPressed = this.playerController.isDropPressed();
         const isReturnPressed = this.playerController.isReturnPressed();
 
-        // E 鍵：拾取物品 或 與 NPC 互動
+        // E 鍵：拾取物品 或 與 NPC 互動 或 彈吉他
         if (isPickupPressed && !this.lastPickup) {
             if (!this.interactionSystem.isHoldingObject() && targetedItem) {
-                // 拾取物品
-                this.interactionSystem.pickupObject();
-                this.updateInteractionHint();
+                // 特殊處理：吉他不拾取，而是播放音樂
+                if (targetedItem.type === 'guitar') {
+                    this.npcManager.playGuitarSound();
+                } else {
+                    // 拾取物品
+                    this.interactionSystem.pickupObject();
+                    this.updateInteractionHint();
+                }
             } else {
                 // 與 NPC 互動
                 const npcTarget = this.npcManager.checkInteractions(this.playerController.position);
@@ -173,6 +179,31 @@ class BarSimulator {
             this.playerController.resetMouseButton('right');
         }
         this.lastRightMouse = isRightPressed;
+
+        // F 鍵：給附近的 NPC 喝酒
+        const isGiveToNPCPressed = this.playerController.isKeyPressed('f');
+        if (isGiveToNPCPressed && !this.lastGiveToNPC && heldObject && heldType === 'glass') {
+            const nearbyNPC = this.npcManager.getNearbyNPC(this.playerController.position);
+            if (nearbyNPC) {
+                const contents = this.cocktailSystem.containerContents.get(heldObject);
+                if (contents && contents.volume > 0) {
+                    // NPC喝酒並給予評分
+                    const drinkInfo = this.cocktailSystem.drink(heldObject);
+                    if (drinkInfo) {
+                        this.npcManager.npcDrinkCocktail(nearbyNPC, drinkInfo);
+                    }
+                }
+            }
+            this.playerController.resetKey('f');
+        }
+        this.lastGiveToNPC = isGiveToNPCPressed;
+
+        // 顯示容器成分信息（當拿著杯子或搖酒器時）
+        if (heldObject && (heldType === 'glass' || heldType === 'shaker')) {
+            this.cocktailSystem.showContainerInfo(heldObject);
+        } else {
+            this.cocktailSystem.hideContainerInfo();
+        }
 
         // 更新 UI 提示
         this.updateInteractionHint();
