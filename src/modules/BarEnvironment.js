@@ -82,6 +82,23 @@ export class BarEnvironment {
             this.guitar.getWorldPosition(guitarWorldPos);
             this.interaction.registerInteractable(this.guitar, 'guitar', guitarWorldPos);
         }
+
+        // 註冊材料瓶為可互動物品
+        if (this.ingredientBottles) {
+            this.ingredientBottles.forEach(ingredientData => {
+                const bottle = ingredientData.mesh;
+                // 計算世界位置
+                const worldPos = new THREE.Vector3();
+                bottle.getWorldPosition(worldPos);
+
+                this.interaction.registerInteractable(bottle, 'bottle', worldPos);
+                this.physics.addCylinderBody(bottle, 0.08, 0.1, 0.35, 0.2, 'glass');
+
+                // 標記材料類型
+                bottle.userData.liquorType = ingredientData.type;
+                bottle.userData.displayName = ingredientData.displayName;
+            });
+        }
     }
 
     /**
@@ -100,6 +117,7 @@ export class BarEnvironment {
         this.createBarStools();
         this.createBarDecoration();
         this.createPremiumBottleDisplay();
+        this.createIngredientShelf(); // 添加材料展示櫃
         this.createDrinkingGlasses(); // 添加可互動的杯子
     }
     
@@ -2032,19 +2050,143 @@ export class BarEnvironment {
     }
 
     /**
+     * 創建材料展示櫃（在曦樂右邊）
+     */
+    createIngredientShelf() {
+        const shelfGroup = new THREE.Group();
+
+        // 展示櫃背板
+        const backPanel = new THREE.Mesh(
+            new THREE.BoxGeometry(2.5, 2.0, 0.1),
+            new THREE.MeshPhongMaterial({
+                color: 0x2a1810, // 深棕色木質
+                shininess: 30
+            })
+        );
+        backPanel.position.set(0, 1.0, -0.4);
+        shelfGroup.add(backPanel);
+
+        // 3層架子
+        for (let i = 0; i < 3; i++) {
+            const shelf = new THREE.Mesh(
+                new THREE.BoxGeometry(2.4, 0.08, 0.5),
+                new THREE.MeshPhongMaterial({
+                    color: 0x3a2010,
+                    shininess: 40
+                })
+            );
+            shelf.position.set(0, 0.4 + i * 0.7, -0.2);
+            shelfGroup.add(shelf);
+        }
+
+        // 調酒材料清單（經典調酒常用材料）
+        this.ingredientBottles = [];
+        const ingredients = [
+            // 第一層：利口酒類
+            { type: 'vermouth_dry', name: 'Dry Vermouth', displayName: '不甜香艾酒', color: 0xe8e8d0, x: -0.9, y: 0.4 },
+            { type: 'vermouth_sweet', name: 'Sweet Vermouth', displayName: '甜香艾酒', color: 0x8b4513, x: -0.3, y: 0.4 },
+            { type: 'campari', name: 'Campari', displayName: '金巴利', color: 0xdc143c, x: 0.3, y: 0.4 },
+            { type: 'triple_sec', name: 'Triple Sec', displayName: '橙皮酒', color: 0xffa500, x: 0.9, y: 0.4 },
+
+            // 第二層：果汁和糖漿
+            { type: 'lemon_juice', name: 'Lemon Juice', displayName: '檸檬汁', color: 0xfff44f, x: -0.9, y: 1.1 },
+            { type: 'lime_juice', name: 'Lime Juice', displayName: '萊姆汁', color: 0xbfff00, x: -0.3, y: 1.1 },
+            { type: 'simple_syrup', name: 'Simple Syrup', displayName: '糖漿', color: 0xffffff, x: 0.3, y: 1.1 },
+            { type: 'grenadine', name: 'Grenadine', displayName: '紅石榴糖漿', color: 0xff1493, x: 0.9, y: 1.1 },
+
+            // 第三層：特殊材料
+            { type: 'pineapple_juice', name: 'Pineapple Juice', displayName: '鳳梨汁', color: 0xffff66, x: -0.9, y: 1.8 },
+            { type: 'coconut_cream', name: 'Coconut Cream', displayName: '椰漿', color: 0xfffaf0, x: -0.3, y: 1.8 },
+            { type: 'orange_juice', name: 'Orange Juice', displayName: '柳橙汁', color: 0xff8c00, x: 0.3, y: 1.8 },
+            { type: 'cranberry_juice', name: 'Cranberry Juice', displayName: '蔓越莓汁', color: 0xdc143c, x: 0.9, y: 1.8 }
+        ];
+
+        ingredients.forEach(ingredient => {
+            const bottle = this.createIngredientBottle(ingredient);
+            bottle.position.set(ingredient.x, ingredient.y, 0);
+            shelfGroup.add(bottle);
+
+            // 保存到陣列以便後續註冊為可互動物品
+            this.ingredientBottles.push({
+                mesh: bottle,
+                type: ingredient.type,
+                name: ingredient.name,
+                displayName: ingredient.displayName
+            });
+        });
+
+        // 設定位置：在曦樂（-2, 0, -5）右邊
+        shelfGroup.position.set(0, 0, -5.5);
+
+        shelfGroup.castShadow = true;
+        shelfGroup.receiveShadow = true;
+
+        this.scene.add(shelfGroup);
+    }
+
+    /**
+     * 創建材料瓶
+     */
+    createIngredientBottle(ingredient) {
+        const bottleGroup = new THREE.Group();
+
+        // 瓶身（較小的瓶子）
+        const bottleBody = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.08, 0.1, 0.35, 8),
+            new THREE.MeshPhongMaterial({
+                color: ingredient.color,
+                transparent: true,
+                opacity: 0.7,
+                shininess: 100
+            })
+        );
+        bottleBody.position.y = 0.175;
+
+        // 瓶蓋
+        const cap = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.06, 0.06, 0.04),
+            new THREE.MeshPhongMaterial({
+                color: 0x2c2c2c,
+                shininess: 80
+            })
+        );
+        cap.position.y = 0.37;
+
+        // 標籤
+        const label = new THREE.Mesh(
+            new THREE.BoxGeometry(0.14, 0.12, 0.01),
+            new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                shininess: 10
+            })
+        );
+        label.position.set(0, 0.15, 0.095);
+
+        bottleGroup.add(bottleBody);
+        bottleGroup.add(cap);
+        bottleGroup.add(label);
+
+        bottleGroup.castShadow = true;
+        bottleGroup.receiveShadow = true;
+
+        return bottleGroup;
+    }
+
+    /**
      * 創建可互動的杯子
      */
     createDrinkingGlasses() {
-        // 在吧檯上放置 3 個杯子
+        // 在吧檯上放置 1 個可互動的杯子（其他杯子已註解）
         const glassPositions = [
-            { x: 1.5, z: -2.3 },
-            { x: 2.5, z: -2.3 },
-            { x: 3.5, z: -2.3 }
+            { x: 2.5, z: -2.3 }
+            // { x: 1.5, z: -2.3 },  // 已隱藏
+            // { x: 3.5, z: -2.3 }   // 已隱藏
         ];
 
         glassPositions.forEach(pos => {
             const glass = this.createRealisticGlass();
-            glass.position.set(pos.x, 1.4, pos.z);
+            // 從稍高的位置掉落，讓重力系統生效
+            glass.position.set(pos.x, 2.5, pos.z);
             this.glasses.push(glass);
             this.scene.add(glass);
         });

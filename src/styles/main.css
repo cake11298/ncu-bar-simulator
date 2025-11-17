@@ -224,3 +224,74 @@ canvas {
     width: 100%;
     height: 100%;
 }
+
+/* 倒酒進度條面板 */
+#pour-progress-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(100, 200, 255, 0.5);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    min-width: 280px;
+    font-family: 'Arial', sans-serif;
+}
+
+#pour-progress-panel.visible {
+    display: block;
+}
+
+.progress-section {
+    margin-bottom: 15px;
+}
+
+.progress-section:last-child {
+    margin-bottom: 0;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: #87CEEB;
+    font-weight: bold;
+}
+
+.progress-bar-bg {
+    width: 100%;
+    height: 20px;
+    background: rgba(50, 50, 50, 0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    border-radius: 10px;
+    transition: width 0.2s ease;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.progress-bar.pour-active {
+    background: linear-gradient(90deg, #FF6B6B, #FF8E53);
+    box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+    animation: pourPulse 1s infinite;
+}
+
+@keyframes pourPulse {
+    0%, 100% {
+        opacity: 0.9;
+    }
+    50% {
+        opacity: 1;
+        box-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+    }
+}

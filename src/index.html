@@ -19,6 +19,28 @@
         <div id="interaction-hint">按 E 互動</div>
         <div id="drink-message"></div>
         <div id="container-info"></div>
+
+        <!-- 倒酒進度條 -->
+        <div id="pour-progress-panel" style="display: none;">
+            <div class="progress-section">
+                <div class="progress-label">
+                    <span>杯子容量</span>
+                    <span id="container-volume-text">0/300ml</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div id="container-volume-bar" class="progress-bar" style="width: 0%;"></div>
+                </div>
+            </div>
+            <div class="progress-section">
+                <div class="progress-label">
+                    <span>倒出量</span>
+                    <span id="pour-rate-text">0ml/s</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div id="pour-rate-bar" class="progress-bar pour-active" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>
