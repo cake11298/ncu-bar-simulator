@@ -13,6 +13,17 @@ export class PlayerController {
         this.keys = {};
         this.keyPressed = {}; // 追蹤按鍵狀態，避免重複觸發
         this.isLocked = false;
+
+        // 滑鼠按鍵狀態
+        this.mouseButtons = {
+            left: false,
+            right: false
+        };
+        this.mousePressed = {
+            left: false,
+            right: false
+        };
+
         this.setupEventListeners();
     }
     
@@ -68,6 +79,40 @@ export class PlayerController {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 document.exitPointerLock();
+            }
+        });
+
+        // 滑鼠按鍵事件
+        document.addEventListener('mousedown', (e) => {
+            if (!this.isLocked) return;
+
+            if (e.button === 0) { // 左鍵
+                this.mouseButtons.left = true;
+                if (!this.mousePressed.left) {
+                    this.mousePressed.left = true;
+                }
+            } else if (e.button === 2) { // 右鍵
+                this.mouseButtons.right = true;
+                if (!this.mousePressed.right) {
+                    this.mousePressed.right = true;
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (e.button === 0) {
+                this.mouseButtons.left = false;
+                this.mousePressed.left = false;
+            } else if (e.button === 2) {
+                this.mouseButtons.right = false;
+                this.mousePressed.right = false;
+            }
+        });
+
+        // 禁用右鍵菜單
+        document.addEventListener('contextmenu', (e) => {
+            if (this.isLocked) {
+                e.preventDefault();
             }
         });
     }
@@ -139,5 +184,44 @@ export class PlayerController {
     // 手動設定滑鼠敏感度
     setMouseSensitivity(sensitivity) {
         this.mouseSensitivity = sensitivity;
+    }
+
+    // 檢查是否按下拾取鍵 (E)
+    isPickupPressed() {
+        return this.keys['e'] && this.keyPressed['e'];
+    }
+
+    // 檢查是否按下放下鍵 (Q)
+    isDropPressed() {
+        return this.keys['q'] && this.keyPressed['q'];
+    }
+
+    // 檢查是否按下放回原位鍵 (R)
+    isReturnPressed() {
+        return this.keys['r'] && this.keyPressed['r'];
+    }
+
+    // 檢查是否按住滑鼠左鍵（倒酒/搖酒）
+    isLeftMouseHeld() {
+        return this.mouseButtons.left;
+    }
+
+    // 檢查是否按下滑鼠右鍵（喝酒）
+    isRightMousePressed() {
+        return this.mouseButtons.right && this.mousePressed.right;
+    }
+
+    // 重置按鍵狀態
+    resetKey(key) {
+        this.keyPressed[key] = false;
+    }
+
+    // 重置滑鼠按鍵狀態
+    resetMouseButton(button) {
+        if (button === 'left') {
+            this.mousePressed.left = false;
+        } else if (button === 'right') {
+            this.mousePressed.right = false;
+        }
     }
 }
