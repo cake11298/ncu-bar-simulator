@@ -68,7 +68,13 @@ export class NPCManager {
                 "我最喜歡規劃有趣的主題派對了！",
                 "你知道嗎？我們社團的IG都是我在經營的",
                 "最近在策劃跟其他學校的交流活動",
-                "調酒雖然不是我的強項，但活動規劃我可是專家！"
+                "調酒雖然不是我的強項，但活動規劃我可是專家！",
+                "上次社團聚餐大家都玩得很開心呢",
+                "我們下個月要辦調酒比賽，獎品超豐富的！",
+                "社團的氣氛真的很棒，大家都像家人一樣",
+                "有時候忙到很晚，但看到活動成功就覺得很值得",
+                "你有沒有想過要加入我們的幹部團隊？",
+                "最近在想要不要辦一個調酒主題的快閃活動"
             ],
             gender: 'female'
         });
@@ -865,14 +871,26 @@ export class NPCManager {
 
         // 黃正安的特殊反應
         if (npcName === '正安') {
-            const reactions = [
-                '嗯...喝起來像黃曦樂調的呢！',
-                '這個味道...讓我想起曦樂的風格',
-                '感覺有曦樂的影子在裡面',
-                '是曦樂教你這樣調的嗎？'
-            ];
-            reaction = reactions[Math.floor(Math.random() * reactions.length)];
-            rating = Math.min(10, rating + Math.floor(Math.random() * 3));
+            // 檢查是否是馬丁尼
+            const hasGin = ingredientTypes.includes('gin');
+            const hasDryVermouth = ingredientTypes.includes('vermouth_dry');
+            const isMartini = hasGin && hasDryVermouth && ingredientTypes.length <= 3; // 馬丁尼通常只有2-3種材料
+
+            if (isMartini) {
+                // 馬丁尼特殊反應
+                reaction = '楊智宇是你嗎？這馬丁尼調得太經典了！';
+                rating = Math.min(10, rating + 3);
+            } else {
+                // 一般反應（提到曦樂）
+                const reactions = [
+                    '嗯...喝起來像黃曦樂調的呢！',
+                    '這個味道...讓我想起曦樂的風格',
+                    '感覺有曦樂的影子在裡面',
+                    '是曦樂教你這樣調的嗎？'
+                ];
+                reaction = reactions[Math.floor(Math.random() * reactions.length)];
+                rating = Math.min(10, rating + Math.floor(Math.random() * 3));
+            }
         }
         // 其他幹部的隨機反應
         else {
@@ -926,7 +944,12 @@ export class NPCManager {
                 rating += 2;
             }
         } else if (npcName === '瑜柔(宅魚)') {
-            reaction += ' 從化學角度來看，這個配方很有趣。';
+            if (rating >= 7) {
+                // 如果評分不錯，特殊反應
+                reaction = '黃曦樂是你嗎？這個調得太好了！從化學角度來看，這個配方很有趣。';
+            } else {
+                reaction += ' 從化學角度來看，這個配方很有趣。';
+            }
         } else if (npcName === '恩若') {
             reaction += ' 顏色也很漂亮呢！';
         } else if (npcName === '旻偉') {

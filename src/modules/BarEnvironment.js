@@ -548,24 +548,25 @@ export class BarEnvironment {
 
         // 儲存 Shaker 引用
         this.barTools.shaker = shakerGroup;
-        
+
         // 精密雙頭量酒器
         this.createPrecisionJigger();
-        
+
+        // === 以下工具已暫時註解，簡化吧檯布局 ===
         // 專業螺旋攪拌匙
-        this.createProfessionalBarSpoon();
-        
+        // this.createProfessionalBarSpoon();
+
         // 高級隔冰器
-        this.createPremiumStrainer();
-        
-        // 日式調酒杯
-        this.createJapaneseMixingGlass();
-        
+        // this.createPremiumStrainer();
+
+        // 日式調酒杯（裝飾用，已改用可互動的 Mixing Glass）
+        // this.createJapaneseMixingGlass();
+
         // 專業搗棒
-        this.createProfessionalMuddler();
-        
+        // this.createProfessionalMuddler();
+
         // 添加其他專業工具
-        this.createAdditionalTools();
+        // this.createAdditionalTools();
     }
     
     createPrecisionJigger() {
@@ -2115,8 +2116,8 @@ export class BarEnvironment {
             });
         });
 
-        // 設定位置：在曦樂（-2, 0, -5）右邊
-        shelfGroup.position.set(0, 0, -5.5);
+        // 設定位置：在 Seaton 曦樂（-2, 0, -5）的左邊，方便玩家拿取
+        shelfGroup.position.set(-4.5, 0, -5);
 
         shelfGroup.castShadow = true;
         shelfGroup.receiveShadow = true;
@@ -2176,20 +2177,61 @@ export class BarEnvironment {
      * 創建可互動的杯子
      */
     createDrinkingGlasses() {
-        // 在吧檯上放置 1 個可互動的杯子（其他杯子已註解）
+        // 在吧檯上放置 3 個 Mixing Glass 風格的杯子
+        // 放置在 Seaton 的右前方（靠近吧台邊緣），方便玩家拿取
         const glassPositions = [
-            { x: 2.5, z: -2.3 }
-            // { x: 1.5, z: -2.3 },  // 已隱藏
-            // { x: 3.5, z: -2.3 }   // 已隱藏
+            { x: -3.2, z: -2.5 },  // 左邊
+            { x: -2.5, z: -2.5 },  // 中間
+            { x: -1.8, z: -2.5 }   // 右邊
         ];
 
         glassPositions.forEach(pos => {
-            const glass = this.createRealisticGlass();
+            const glass = this.createMixingGlassForDrinking();
             // 從稍高的位置掉落，讓重力系統生效
             glass.position.set(pos.x, 2.5, pos.z);
             this.glasses.push(glass);
             this.scene.add(glass);
         });
+    }
+
+    /**
+     * 創建 Mixing Glass 風格的可互動杯子（類似日式調酒杯）
+     */
+    createMixingGlassForDrinking() {
+        const glassGroup = new THREE.Group();
+
+        // 主杯身（高腰圓柱體，mixing glass特徵）
+        const glassBody = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.19, 0.16, 0.65, 16, 1, true),
+            new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.12,
+                shininess: 200,
+                specular: 0xaaaaaa,
+                side: THREE.DoubleSide
+            })
+        );
+        glassBody.position.y = 0.325;
+
+        // 杯底加厚（mixing glass特徵）
+        const glassBase = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.16, 0.16, 0.08),
+            new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.2,
+                shininess: 200
+            })
+        );
+        glassBase.position.y = 0.04;
+
+        glassGroup.add(glassBody);
+        glassGroup.add(glassBase);
+        glassGroup.castShadow = true;
+        glassGroup.userData.interactable = true;
+
+        return glassGroup;
     }
 
     /**

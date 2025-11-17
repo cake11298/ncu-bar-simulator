@@ -20,6 +20,13 @@
         <div id="drink-message"></div>
         <div id="container-info"></div>
 
+        <!-- 準星 -->
+        <div id="crosshair">
+            <div class="crosshair-line crosshair-horizontal"></div>
+            <div class="crosshair-line crosshair-vertical"></div>
+            <div class="crosshair-dot"></div>
+        </div>
+
         <!-- 倒酒進度條 -->
         <div id="pour-progress-panel" style="display: none;">
             <div class="progress-section">
@@ -33,8 +40,8 @@
             </div>
             <div class="progress-section">
                 <div class="progress-label">
-                    <span>倒出量</span>
-                    <span id="pour-rate-text">0ml/s</span>
+                    <span>本次倒入量</span>
+                    <span id="pour-rate-text">0ml</span>
                 </div>
                 <div class="progress-bar-bg">
                     <div id="pour-rate-bar" class="progress-bar pour-active" style="width: 0%;"></div>

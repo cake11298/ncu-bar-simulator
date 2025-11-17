@@ -16,6 +16,8 @@ export default class CocktailSystem {
         this.pouringStartTime = 0;
         this.currentPouringBottle = null; // 當前倒酒的酒瓶
         this.originalBottleRotation = null; // 酒瓶原始旋轉
+        this.currentPouringAmount = 0; // 當前這次倒酒的累積量
+        this.pourProgressHideTimer = null; // 進度條隱藏計時器
 
         // 喝酒狀態
         this.isDrinking = false;
@@ -287,17 +289,18 @@ export default class CocktailSystem {
         const contents = this.containerContents.get(container);
         if (!contents) return;
 
-        // 創建液體網格（圓柱體）
-        const liquidGeometry = new THREE.CylinderGeometry(0.13, 0.13, 0.01, 16);
+        // 創建液體網格（圓柱體）- 初始高度設為0.1，後續會動態調整
+        const liquidGeometry = new THREE.CylinderGeometry(0.14, 0.14, 0.1, 16);
         const liquidMaterial = new THREE.MeshPhongMaterial({
             color: contents.color,
             transparent: true,
-            opacity: 0.8,
+            opacity: 0.7,
+            shininess: 30,
             side: THREE.DoubleSide
         });
 
         const liquidMesh = new THREE.Mesh(liquidGeometry, liquidMaterial);
-        liquidMesh.position.y = -0.3; // 杯子底部
+        liquidMesh.position.y = -0.25; // 杯子底部
         liquidMesh.visible = false; // 初始隱藏
 
         container.add(liquidMesh);
@@ -318,11 +321,16 @@ export default class CocktailSystem {
             // 顯示液體
             contents.liquidMesh.visible = true;
 
-            // 更新高度（根據容量）
+            // 更新高度（根據容量）- 使用實際的圓柱體高度而不是拉伸
             const maxHeight = 0.6; // 杯子高度
             const liquidHeight = maxHeight * fillRatio;
 
-            contents.liquidMesh.scale.y = liquidHeight * 10; // 調整比例
+            // 重新創建幾何體以獲得正確的高度（避免拉伸變形）
+            const newGeometry = new THREE.CylinderGeometry(0.14, 0.14, liquidHeight, 16);
+            contents.liquidMesh.geometry.dispose(); // 釋放舊幾何體
+            contents.liquidMesh.geometry = newGeometry;
+
+            // 定位液體（底部對齊杯子底部）
             contents.liquidMesh.position.y = -0.3 + liquidHeight / 2;
 
             // 更新顏色
@@ -391,7 +399,17 @@ export default class CocktailSystem {
                 this.isPouringActive = true;
                 this.currentPouringBottle = bottle;
                 this.originalBottleRotation = bottle.rotation.clone();
+                this.currentPouringAmount = 0; // 重置倒酒累積量
+
+                // 清除之前的隱藏計時器
+                if (this.pourProgressHideTimer) {
+                    clearTimeout(this.pourProgressHideTimer);
+                    this.pourProgressHideTimer = null;
+                }
             }
+
+            // 累積這次倒酒的總量
+            this.currentPouringAmount += amountPoured;
 
             // 倒酒動畫：傾斜酒瓶
             if (this.currentPouringBottle) {
@@ -417,9 +435,112 @@ export default class CocktailSystem {
         this.originalBottleRotation = null;
         this.removePourParticles();
 
-        // 隱藏倒酒進度條
+        // 延遲5秒後隱藏倒酒進度條
         if (this.pourProgressPanel) {
-            this.pourProgressPanel.style.display = 'none';
+            // 清除之前的計時器（如果有）
+            if (this.pourProgressHideTimer) {
+                clearTimeout(this.pourProgressHideTimer);
+            }
+
+            // 設置新的計時器，5秒後隱藏
+            this.pourProgressHideTimer = setTimeout(() => {
+                if (this.pourProgressPanel) {
+                    this.pourProgressPanel.style.display = 'none';
+                }
+                this.currentPouringAmount = 0; // 重置累積量
+            }, 5000);
+        }
+    }
+
+    /**
+     * 從 Shaker 倒酒到其他容器
+     * @param {THREE.Object3D} shaker - Shaker 物件
+     * @param {THREE.Object3D} targetContainer - 目標容器
+     * @param {number} deltaTime - 時間增量
+     */
+    pourFromShaker(shaker, targetContainer, deltaTime) {
+        const shakerContents = this.containerContents.get(shaker);
+        const targetContents = this.containerContents.get(targetContainer);
+
+        if (!shakerContents || !targetContents) return;
+        if (shakerContents.volume <= 0) return; // Shaker 是空的
+        if (targetContents.volume >= targetContents.maxVolume) return; // 目標容器已滿
+
+        // 倒酒速度（ml/秒）
+        const pourRate = 50;
+        const amountToPour = Math.min(
+            pourRate * deltaTime,
+            shakerContents.volume, // Shaker 剩餘量
+            targetContents.maxVolume - targetContents.volume // 目標容器剩餘空間
+        );
+
+        // 轉移材料
+        shakerContents.ingredients.forEach(ingredient => {
+            // 計算這個材料應該轉移的比例
+            const ratio = amountToPour / shakerContents.volume;
+            const transferAmount = ingredient.amount * ratio;
+
+            // 從 Shaker 減少
+            ingredient.amount -= transferAmount;
+
+            // 添加到目標容器
+            const existingIngredient = targetContents.ingredients.find(
+                ing => ing.type === ingredient.type
+            );
+
+            if (existingIngredient) {
+                existingIngredient.amount += transferAmount;
+            } else {
+                targetContents.ingredients.push({
+                    type: ingredient.type,
+                    name: ingredient.name,
+                    displayName: ingredient.displayName,
+                    amount: transferAmount,
+                    color: ingredient.color
+                });
+            }
+        });
+
+        // 更新體積
+        shakerContents.volume -= amountToPour;
+        targetContents.volume += amountToPour;
+
+        // 清理 Shaker 中量為 0 的材料
+        shakerContents.ingredients = shakerContents.ingredients.filter(
+            ing => ing.amount > 0.01
+        );
+
+        // 更新顏色和視覺效果
+        this.updateMixedColor(shaker);
+        this.updateMixedColor(targetContainer);
+        this.updateLiquidVisual(shaker);
+        this.updateLiquidVisual(targetContainer);
+
+        // 更新進度條 UI
+        this.updatePourProgressUI(targetContainer, amountToPour);
+
+        // 創建倒酒效果
+        if (!this.isPouringActive) {
+            this.createPourParticles(shaker, targetContainer);
+            this.isPouringActive = true;
+            this.currentPouringBottle = shaker;
+            this.originalBottleRotation = shaker.rotation.clone();
+            this.currentPouringAmount = 0;
+
+            if (this.pourProgressHideTimer) {
+                clearTimeout(this.pourProgressHideTimer);
+                this.pourProgressHideTimer = null;
+            }
+        }
+
+        this.currentPouringAmount += amountToPour;
+
+        // 傾斜動畫
+        if (this.currentPouringBottle) {
+            const targetRotation = Math.PI / 3;
+            const currentZ = this.currentPouringBottle.rotation.z;
+            const lerpSpeed = 3.0 * deltaTime;
+            this.currentPouringBottle.rotation.z += (targetRotation - currentZ) * lerpSpeed;
         }
     }
 
@@ -446,13 +567,13 @@ export default class CocktailSystem {
             this.containerVolumeText.textContent = `${Math.round(contents.volume)}/${contents.maxVolume}ml`;
         }
 
-        // 更新倒出量進度條（倒酒速度 50ml/s，顯示為百分比）
-        const pourRatePercentage = (this.pourRate / 100) * 100; // 相對於最大倒酒速度
+        // 更新倒入量進度條（顯示這次倒酒的累積總量）
+        const totalPouredPercentage = (this.currentPouringAmount / contents.maxVolume) * 100;
         if (this.pourRateBar) {
-            this.pourRateBar.style.width = `${pourRatePercentage}%`;
+            this.pourRateBar.style.width = `${Math.min(totalPouredPercentage, 100)}%`;
         }
         if (this.pourRateText) {
-            this.pourRateText.textContent = `${this.pourRate}ml/s`;
+            this.pourRateText.textContent = `${Math.round(this.currentPouringAmount)}ml`;
         }
     }
 
@@ -895,6 +1016,9 @@ export default class CocktailSystem {
                 `;
             }).join('');
 
+            // 計算酒精濃度
+            const alcoholContent = this.calculateAlcoholContent(contents);
+
             // 識別雞尾酒
             const cocktailName = this.identifyCocktail(contents);
 
@@ -904,13 +1028,39 @@ export default class CocktailSystem {
                     ${ingredientListHTML}
                 </div>
                 <div class="volume-info">
-                    總容量: ${Math.round(contents.volume)} / ${contents.maxVolume} ml
+                    總容量: ${Math.round(contents.volume)} / ${contents.maxVolume} ml<br>
+                    酒精濃度: ${alcoholContent.toFixed(1)}%
                 </div>
             `;
             infoDiv.classList.add('visible');
         } else {
             infoDiv.classList.remove('visible');
         }
+    }
+
+    /**
+     * 計算容器內的平均酒精濃度
+     * @param {Object} contents - 容器內容
+     * @returns {number} 酒精濃度（百分比）
+     */
+    calculateAlcoholContent(contents) {
+        if (!contents || contents.volume === 0) return 0;
+
+        let totalAlcohol = 0; // 總酒精量（ml）
+
+        // 計算每種材料的酒精含量
+        contents.ingredients.forEach(ing => {
+            const liquor = this.liquorDatabase.get(ing.type);
+            if (liquor && liquor.alcoholContent) {
+                // 酒精含量 = 材料量 * 酒精濃度
+                totalAlcohol += ing.amount * (liquor.alcoholContent / 100);
+            }
+        });
+
+        // 平均酒精濃度 = 總酒精量 / 總容量 * 100%
+        const averageAlcoholContent = (totalAlcohol / contents.volume) * 100;
+
+        return averageAlcoholContent;
     }
 
     /**
