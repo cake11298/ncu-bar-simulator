@@ -317,7 +317,7 @@ export class RetirementLounge {
         }
         
         tableGroup.add(tableTop);
-        tableGroup.position.set(0, 0, 13);
+        tableGroup.position.set(0, 0, 11.5);
         
         this.furniture.push(tableGroup);
         this.scene.add(tableGroup);
