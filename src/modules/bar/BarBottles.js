@@ -266,9 +266,9 @@ export class BarBottles {
     createDrinkingGlasses() {
         // 放置在 Seaton 的右前方(靠近吧台邊緣),方便玩家拿取
         const glassPositions = [
-            { x: -3.2, z: -2.5 },  // 左邊
+            { x: -4.7, z: -2.5 },  // 左邊
             { x: -2.5, z: -2.5 },  // 中間
-            { x: -1.8, z: -2.5 }   // 右邊
+            { x: -1, z: -2.5 }   // 右邊
         ];
 
         glassPositions.forEach(pos => {
