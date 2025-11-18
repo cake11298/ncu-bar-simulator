@@ -14,9 +14,7 @@ export class BarDisplays {
      * 創建所有展示櫃
      */
     createAll() {
-        // 暫時註解掉高級酒瓶展示櫃,簡化場景
-        // this.createPremiumBottleDisplay();
-
+        this.createPremiumBottleDisplay();
         this.createIngredientShelf();
     }
 
@@ -163,11 +161,10 @@ export class BarDisplays {
             });
         });
 
-        // 重要:調整位置到 Seaton 旁邊,靠近小仙人掌位置
-        // Seaton 位置大約在 (-2, 0, -5)
-        // 將展示櫃放在 Seaton 的左邊,三顆小仙人掌附近有櫃子的位置
-        displayCase.position.set(-4.8, 0, -4.5);
-        displayCase.rotation.y = Math.PI / 6; // 稍微旋轉,面向玩家
+        // 重要:調整位置靠近左牆
+        // 左牆位置在 x = -10，將展示櫃靠近左牆並平行於牆面
+        displayCase.position.set(-8.5, 0, -4);
+        displayCase.rotation.y = Math.PI / 2; // 旋轉90度，平行於左牆
 
         displayCase.castShadow = true;
         displayCase.receiveShadow = true;
@@ -221,6 +218,124 @@ export class BarDisplays {
         bottleGroup.receiveShadow = true;
 
         return bottleGroup;
+    }
+
+    /**
+     * 創建高級酒瓶展示櫃
+     */
+    createPremiumBottleDisplay() {
+        const displayCase = new THREE.Group();
+
+        // 透明玻璃展示櫃 - 修改為真正透明
+        const glassCase = new THREE.Mesh(
+            new THREE.BoxGeometry(4, 2.5, 1.2, 1, 1, 1),
+            new THREE.MeshPhongMaterial({
+                color: 0xffffff, // 改為白色
+                transparent: true,
+                opacity: 0.1, // 更透明
+                shininess: 200,
+                side: THREE.DoubleSide
+            })
+        );
+        glassCase.position.y = 1.25;
+
+        // 展示櫃框架 - 改為更亮的金屬色
+        const caseFrame = new THREE.Mesh(
+            new THREE.BoxGeometry(4.1, 2.6, 1.3),
+            new THREE.MeshPhongMaterial({
+                color: 0xc0c0c0, // 改為銀色
+                shininess: 120,
+                metalness: 0.8
+            })
+        );
+        caseFrame.position.y = 1.25;
+
+        // 展示層板 - 改為更透明的玻璃
+        for (let i = 0; i < 3; i++) {
+            const shelf = new THREE.Mesh(
+                new THREE.BoxGeometry(3.8, 0.05, 1),
+                new THREE.MeshPhongMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.15, // 降低不透明度
+                    shininess: 200
+                })
+            );
+            shelf.position.set(0, 0.3 + i * 0.7, 0);
+            displayCase.add(shelf);
+
+            // LED 燈帶 - 增強亮度
+            const ledStrip = new THREE.Mesh(
+                new THREE.BoxGeometry(3.6, 0.02, 0.1),
+                new THREE.MeshBasicMaterial({
+                    color: 0x87ceeb,
+                    transparent: true,
+                    opacity: 0.9 // 增加亮度
+                })
+            );
+            ledStrip.position.set(0, 0.32 + i * 0.7, -0.45);
+            displayCase.add(ledStrip);
+        }
+
+        // 精品酒款展示
+        const premiumBottles = [
+            { name: 'Macallan 25', color: 0x8b4513, height: 0.9, x: -1.3, y: 1.6, rarity: '珍藏' },
+            { name: 'Dom Pérignon', color: 0x2d4a2d, height: 0.85, x: -0.4, y: 1.6, rarity: '香檳' },
+            { name: 'Hennessy XO', color: 0x4a2c17, height: 0.8, x: 0.5, y: 1.6, rarity: '干邑' },
+            { name: 'Grey Goose Magnum', color: 0xe6e6fa, height: 0.95, x: 1.4, y: 1.6, rarity: '大瓶裝' },
+
+            { name: 'Hibiki 21', color: 0xdaa520, height: 0.85, x: -1.1, y: 0.9, rarity: '日威' },
+            { name: 'Johnnie Blue', color: 0x191970, height: 0.9, x: 0, y: 0.9, rarity: '藍牌' },
+            { name: 'Rémy XO', color: 0x8b4513, height: 0.82, x: 1.1, y: 0.9, rarity: '特級' },
+
+            { name: 'Armand de Brignac', color: 0xffd700, height: 0.88, x: -0.7, y: 0.2, rarity: '黑桃A' },
+            { name: 'Crystal Head', color: 0xffffff, height: 0.75, x: 0.7, y: 0.2, rarity: '水晶骷髏' }
+        ];
+
+        premiumBottles.forEach(bottle => {
+            const bottleGroup = new THREE.Group();
+
+            // 瓶身
+            const bottleBody = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.12, 0.15, bottle.height, 8),
+                new THREE.MeshPhongMaterial({
+                    color: bottle.color,
+                    transparent: bottle.color === 0xffffff,
+                    opacity: bottle.color === 0xffffff ? 0.3 : 0.8,
+                    shininess: 150,
+                    metalness: 0.3
+                })
+            );
+
+            // 瓶蓋
+            const cap = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.08, 0.08, 0.06),
+                new THREE.MeshPhongMaterial({
+                    color: bottle.name.includes('Dom') ? 0xffd700 : 0x2c2c2c,
+                    shininess: 120,
+                    metalness: 0.8
+                })
+            );
+            cap.position.y = bottle.height/2 + 0.03;
+
+            bottleGroup.add(bottleBody);
+            bottleGroup.add(cap);
+            bottleGroup.position.set(bottle.x, bottle.y, 0.2);
+
+            displayCase.add(bottleGroup);
+        });
+
+        //displayCase.add(caseFrame);
+        displayCase.add(glassCase);
+
+        // 設定位置並旋轉90度
+        displayCase.position.set(9.5, 0, 9);
+        displayCase.rotation.y = Math.PI / -2; // 繞Y軸旋轉90度
+
+        displayCase.castShadow = true;
+        displayCase.receiveShadow = true;
+
+        this.scene.add(displayCase);
     }
 
     /**

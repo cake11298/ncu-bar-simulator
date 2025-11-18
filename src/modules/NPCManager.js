@@ -778,7 +778,13 @@ export class NPCManager {
         // 特別處理 Gustave 的互動計數
         if (userData.name === 'Gustave') {
             this.gustaveInteractionCount++;
-            
+
+            // 1% 機率出現特殊對話
+            if (Math.random() < 0.01) {
+                this.createSpecialDialogue('其實我挺喜歡黃正安的！');
+                return;
+            }
+
             if (this.gustaveInteractionCount == 100) {
                 const hiddenName = "\u9EC3\u6B63\u5B89";
                 this.createSpecialDialogue(`${hiddenName}？ 別再按了！！！`);

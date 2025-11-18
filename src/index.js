@@ -113,7 +113,7 @@ class BarSimulator {
 
         // 處理拾取/放下物品
         const isPickupPressed = this.playerController.isPickupPressed();
-        const isDropPressed = this.playerController.isDropPressed();
+        const isReturnPressed = this.playerController.isReturnPressed();
 
         // E 鍵：拾取物品 或 與 NPC 互動 或 彈吉他
         if (isPickupPressed && !this.lastPickup) {
@@ -135,15 +135,15 @@ class BarSimulator {
         }
         this.lastPickup = isPickupPressed;
 
-        // Q 鍵：放下物品
-        if (isDropPressed && !this.lastDrop) {
+        // R 鍵：放回原位
+        if (isReturnPressed && !this.lastReturn) {
             if (this.interactionSystem.isHoldingObject()) {
-                this.interactionSystem.dropObject(false);
+                this.interactionSystem.dropObject(true);
                 this.updateInteractionHint();
             }
-            this.playerController.resetKey('q');
+            this.playerController.resetKey('r');
         }
-        this.lastDrop = isDropPressed;
+        this.lastReturn = isReturnPressed;
 
         // === 調酒互動 ===
         const heldObject = this.interactionSystem.getHeldObject();

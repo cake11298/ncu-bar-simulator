@@ -53,17 +53,17 @@ export class BarEnvironment {
         }
 
         // 添加材料展示櫃碰撞體(3層玻璃架子)
-        // 展示櫃位置: (-4.8, 0, -4.5), 旋轉30度
+        // 展示櫃位置: (-8.5, 0, -4), 旋轉90度平行左牆
         // 使用 addShelfCollision 讓架子只與物品碰撞，不與玩家碰撞
         for (let i = 0; i < 3; i++) {
             const shelfLocalY = 0.4 + i * 0.7;
             // 需要考慮展示櫃的旋轉和位置
             const rotation = new THREE.Quaternion();
-            rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 6);
+            rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
 
             this.physics.addShelfCollision(
-                new THREE.Vector3(-4.8, shelfLocalY, -4.5),  // 展示櫃架子位置
-                new THREE.Vector3(2.8, 0.05, 0.8),           // 架子尺寸
+                new THREE.Vector3(-8.5, shelfLocalY, -4),    // 展示櫃架子位置
+                new THREE.Vector3(0.8, 0.05, 2.8),           // 旋轉後的尺寸（因為旋轉90度）
                 rotation
             );
         }
@@ -85,9 +85,9 @@ export class BarEnvironment {
 
         // 註冊杯子為可互動物品
         this.glasses.forEach(glass => {
-            // 設置歸位位置（比當前位置低1.3個單位）
+            // 設置歸位位置（比當前位置低1.8個單位）
             const originalPos = glass.position.clone();
-            originalPos.y -= 1.3;
+            originalPos.y -= 1.8;
             this.interaction.registerInteractable(glass, 'glass', originalPos);
             this.physics.addCylinderBody(glass, 0.13, 0.15, 0.6, 0.3, 'glass');
 
