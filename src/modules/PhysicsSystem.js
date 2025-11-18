@@ -21,6 +21,11 @@ export default class PhysicsSystem {
         // 物理物體映射表 [Three.js Object -> Cannon.js Body]
         this.physicsObjects = new Map();
 
+        // 碰撞群組定義（使用位元遮罩）
+        this.COLLISION_GROUP_DEFAULT = 1;  // 預設群組（玩家、地板等）
+        this.COLLISION_GROUP_OBJECT = 2;   // 可互動物品（酒瓶、杯子等）
+        this.COLLISION_GROUP_SHELF = 4;    // 架子（只與物品碰撞）
+
         // 材質設定
         this.setupMaterials();
 
@@ -103,7 +108,9 @@ export default class PhysicsSystem {
 
         const body = new CANNON.Body({
             mass: mass,
-            material: this[`${materialType}Material`] || this.defaultMaterial
+            material: this[`${materialType}Material`] || this.defaultMaterial,
+            collisionFilterGroup: this.COLLISION_GROUP_OBJECT,  // 屬於物品群組
+            collisionFilterMask: this.COLLISION_GROUP_DEFAULT | this.COLLISION_GROUP_OBJECT | this.COLLISION_GROUP_SHELF  // 與所有群組碰撞
         });
 
         body.addShape(shape);
@@ -132,7 +139,11 @@ export default class PhysicsSystem {
             new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)
         );
 
-        const body = new CANNON.Body({ mass });
+        const body = new CANNON.Body({
+            mass: mass,
+            collisionFilterGroup: this.COLLISION_GROUP_OBJECT,  // 屬於物品群組
+            collisionFilterMask: this.COLLISION_GROUP_DEFAULT | this.COLLISION_GROUP_OBJECT | this.COLLISION_GROUP_SHELF  // 與所有群組碰撞
+        });
         body.addShape(shape);
         body.position.copy(mesh.position);
 
@@ -299,6 +310,36 @@ export default class PhysicsSystem {
         const body = new CANNON.Body({
             mass: 0, // 靜態物體
             material: this.floorMaterial
+        });
+
+        body.addShape(shape);
+        body.position.set(position.x, position.y, position.z);
+
+        if (rotation) {
+            body.quaternion.copy(rotation);
+        }
+
+        this.world.addBody(body);
+        return body;
+    }
+
+    /**
+     * 添加架子碰撞體（只與物品碰撞，不與玩家碰撞）
+     * @param {THREE.Vector3} position - 位置
+     * @param {THREE.Vector3} size - 尺寸
+     * @param {THREE.Quaternion} rotation - 旋轉（可選）
+     * @returns {CANNON.Body}
+     */
+    addShelfCollision(position, size, rotation = null) {
+        const shape = new CANNON.Box(
+            new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)
+        );
+
+        const body = new CANNON.Body({
+            mass: 0, // 靜態物體
+            material: this.floorMaterial,
+            collisionFilterGroup: this.COLLISION_GROUP_SHELF,  // 屬於架子群組
+            collisionFilterMask: this.COLLISION_GROUP_OBJECT   // 只與物品碰撞
         });
 
         body.addShape(shape);

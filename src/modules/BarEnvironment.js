@@ -54,13 +54,14 @@ export class BarEnvironment {
 
         // 添加材料展示櫃碰撞體(3層玻璃架子)
         // 展示櫃位置: (-6.5, 0, -4), 旋轉90度
+        // 使用 addShelfCollision 讓架子只與物品碰撞，不與玩家碰撞
         for (let i = 0; i < 3; i++) {
             const shelfLocalY = 0.4 + i * 0.7;
             // 需要考慮展示櫃的旋轉和位置
             const rotation = new THREE.Quaternion();
             rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
 
-            this.physics.addStaticBox(
+            this.physics.addShelfCollision(
                 new THREE.Vector3(-6.5, shelfLocalY, -4),  // 展示櫃架子位置
                 new THREE.Vector3(0.8, 0.05, 2.8),          // 旋轉後的尺寸(因為旋轉90度)
                 rotation

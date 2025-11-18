@@ -289,21 +289,23 @@ export default class CocktailSystem {
         const contents = this.containerContents.get(container);
         if (!contents) return;
 
-        // 創建液體網格 - 使用橢圓梯形柱體(頂部略小於底部,更像真實液體)
-        // 底部半徑略大,頂部半徑略小,形成自然的液體形狀
-        const liquidGeometry = new THREE.CylinderGeometry(0.13, 0.15, 0.01, 32); // 初始高度很小
+        // 創建液體網格 - 使用圓柱體
+        // 根據杯子結構：glassBase 在 y=0.04，高度 0.08，頂部在 y=0.08
+        // glassBody 從 y=0 開始，高度 0.65
+        // 所以液體應該從 y≈0.08 開始填充
+        const liquidGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.01, 32); // 初始高度很小
         const liquidMaterial = new THREE.MeshPhongMaterial({
             color: contents.color,
             transparent: true,
-            opacity: 0.75, // 略微提高不透明度,更像真實液體
-            shininess: 80, // 增加光澤度
+            opacity: 0.8, // 提高不透明度
+            shininess: 100,
             side: THREE.DoubleSide,
-            reflectivity: 0.3 // 添加反射效果
+            reflectivity: 0.4
         });
 
         const liquidMesh = new THREE.Mesh(liquidGeometry, liquidMaterial);
-        // 將液體放置在杯子內部底部（稍微往上一點避免穿模）
-        liquidMesh.position.set(0, -0.29, 0);
+        // 將液體放置在杯底上方（從杯底頂部開始）
+        liquidMesh.position.set(0, 0.08, 0);
         liquidMesh.visible = false; // 初始隱藏
 
         container.add(liquidMesh);
@@ -343,9 +345,9 @@ export default class CocktailSystem {
             contents.liquidMesh.geometry.dispose(); // 釋放舊幾何體
             contents.liquidMesh.geometry = newGeometry;
 
-            // 定位液體(底部對齊杯子底部，從底部開始往上填充)
-            // 杯子底部在 y = -0.3，液體高度的一半就是中心點
-            contents.liquidMesh.position.y = -0.29 + liquidHeight / 2;
+            // 定位液體(底部對齊杯座頂部，從 y=0.08 開始往上填充)
+            // 液體底部從 glassBase 頂部 (y=0.08) 開始，液體高度的一半就是中心點
+            contents.liquidMesh.position.y = 0.08 + liquidHeight / 2;
 
             // 更新顏色
             contents.liquidMesh.material.color.setHex(contents.color);
