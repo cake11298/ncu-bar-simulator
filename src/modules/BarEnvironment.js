@@ -85,9 +85,9 @@ export class BarEnvironment {
 
         // 註冊杯子為可互動物品
         this.glasses.forEach(glass => {
-            // 設置歸位位置（比當前位置低2.3個單位） - 原本是1.8，改成2.3
+            // 設置歸位位置（比當前位置低1.3個單位） - 原本是1.8，改成1.3
             const originalPos = glass.position.clone();
-            originalPos.y -= 2.3;
+            originalPos.y -= 2;
             this.interaction.registerInteractable(glass, 'glass', originalPos);
             this.physics.addCylinderBody(glass, 0.13, 0.15, 0.6, 0.3, 'glass');
 
