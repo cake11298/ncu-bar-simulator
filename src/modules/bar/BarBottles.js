@@ -274,7 +274,7 @@ export class BarBottles {
         glassPositions.forEach(pos => {
             const glass = this.createMixingGlassForDrinking();
             // 從稍高的位置掉落,讓重力系統生效
-            glass.position.set(pos.x, 2.5, pos.z);
+            glass.position.set(pos.x, 2.3, pos.z);
             this.glasses.push(glass);
             this.scene.add(glass);
         });
