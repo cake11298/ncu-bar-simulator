@@ -58,7 +58,7 @@ export class NPCManager {
         this.addNPC({
             name: '正安',
             position: new THREE.Vector3(9, 0, 1),
-            shirtColor: 0x333333, // 粉紅色上衣
+            shirtColor: 0xffb6c1, // 淺粉紅色上衣
             pantsColor: 0x4169e1, // 藍色牛仔褲
             role: '公關兼副社長',
             rotation: -Math.PI / 2,
@@ -835,6 +835,36 @@ export class NPCManager {
     }
     
     /**
+     * 計算調酒的酒精濃度
+     * @param {Object} drinkInfo - 飲品資訊
+     * @returns {number} 酒精濃度（百分比）
+     */
+    calculateAlcoholContent(drinkInfo) {
+        if (!drinkInfo || drinkInfo.volume === 0) return 0;
+
+        // 酒類的酒精濃度資料庫
+        const alcoholData = {
+            vodka: 40, gin: 40, rum: 40, whiskey: 40, tequila: 40, brandy: 40,
+            vermouth_dry: 18, vermouth_sweet: 16, campari: 25, triple_sec: 40,
+            angostura_bitters: 44.7
+        };
+
+        let totalAlcohol = 0; // 總酒精量（ml）
+
+        // 計算每種材料的酒精含量
+        drinkInfo.ingredients.forEach(ing => {
+            const alcoholContent = alcoholData[ing.type] || 0;
+            if (alcoholContent) {
+                // 酒精含量 = 材料量 * 酒精濃度
+                totalAlcohol += ing.amount * (alcoholContent / 100);
+            }
+        });
+
+        // 平均酒精濃度 = 總酒精量 / 總容量
+        return (totalAlcohol / drinkInfo.volume) * 100;
+    }
+
+    /**
      * NPC 喝酒互動系統
      * @param {Object} npc - NPC 物件
      * @param {Object} drinkInfo - 飲品資訊（從 cocktailSystem.drink() 返回）
@@ -853,6 +883,9 @@ export class NPCManager {
         // 根據成分調整評分
         const ingredientTypes = drinkInfo.ingredients.map(ing => ing.type);
         const volume = drinkInfo.volume;
+
+        // 計算酒精濃度
+        const alcoholContent = this.calculateAlcoholContent(drinkInfo);
 
         // 評分邏輯
         if (volume < 30) {
@@ -880,16 +913,28 @@ export class NPCManager {
                 // 馬丁尼特殊反應
                 reaction = '楊智宇是你嗎？這馬丁尼調得太經典了！';
                 rating = Math.min(10, rating + 3);
-            } else {
-                // 一般反應（提到曦樂）
-                const reactions = [
-                    '嗯...喝起來像黃曦樂調的呢！',
-                    '這個味道...讓我想起曦樂的風格',
-                    '感覺有曦樂的影子在裡面',
-                    '是曦樂教你這樣調的嗎？'
+            } else if (alcoholContent > 30) {
+                // 酒精濃度高於30度時的反應
+                const strongDrinkReactions = [
+                    '好烈！這是曦樂調的嗎？',
+                    '哇...感覺很難喝，曦樂也是這樣調的嗎？',
+                    '這個酒精濃度...讓我想起曦樂的風格呢',
+                    '這麼烈！曦樂是不是教過你這個配方？'
                 ];
-                reaction = reactions[Math.floor(Math.random() * reactions.length)];
-                rating = Math.min(10, rating + Math.floor(Math.random() * 3));
+                reaction = strongDrinkReactions[Math.floor(Math.random() * strongDrinkReactions.length)];
+                rating = Math.max(1, rating - 1); // 減少評分
+            } else {
+                // 一般反應（酒精濃度適中或較低）
+                const normalReactions = [
+                    '嗯...味道還不錯呢！',
+                    '這個調得挺順口的',
+                    '喝起來很舒服，我喜歡',
+                    '這個配方很不錯！',
+                    '哇，比曦樂調的好喝多了！',
+                    '這杯調得很平衡呢'
+                ];
+                reaction = normalReactions[Math.floor(Math.random() * normalReactions.length)];
+                rating = Math.min(10, rating + Math.floor(Math.random() * 2) + 1);
             }
         }
         // 其他幹部的隨機反應

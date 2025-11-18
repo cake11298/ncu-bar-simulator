@@ -16,7 +16,7 @@ export class BarEnvironment {
         this.interactables = []; // 可互動物品列表
         this.glasses = []; // 杯子列表
         this.barTools = {}; // 吧檯工具(shaker, jigger等)
-        this.guitar = null; // 吉他物件(暫時移除)
+        this.guitar = null; // 吉他物件
         this.ingredientBottles = []; // 材料瓶列表
 
         // 系統引用
@@ -53,17 +53,17 @@ export class BarEnvironment {
         }
 
         // 添加材料展示櫃碰撞體(3層玻璃架子)
-        // 展示櫃位置: (-6.5, 0, -4), 旋轉90度
+        // 展示櫃位置: (-4.8, 0, -4.5), 旋轉30度
         // 使用 addShelfCollision 讓架子只與物品碰撞，不與玩家碰撞
         for (let i = 0; i < 3; i++) {
             const shelfLocalY = 0.4 + i * 0.7;
             // 需要考慮展示櫃的旋轉和位置
             const rotation = new THREE.Quaternion();
-            rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+            rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 6);
 
             this.physics.addShelfCollision(
-                new THREE.Vector3(-6.5, shelfLocalY, -4),  // 展示櫃架子位置
-                new THREE.Vector3(0.8, 0.05, 2.8),          // 旋轉後的尺寸(因為旋轉90度)
+                new THREE.Vector3(-4.8, shelfLocalY, -4.5),  // 展示櫃架子位置
+                new THREE.Vector3(2.8, 0.05, 0.8),           // 架子尺寸
                 rotation
             );
         }
@@ -85,7 +85,10 @@ export class BarEnvironment {
 
         // 註冊杯子為可互動物品
         this.glasses.forEach(glass => {
-            this.interaction.registerInteractable(glass, 'glass', glass.position.clone());
+            // 設置歸位位置（比當前位置低1.3個單位）
+            const originalPos = glass.position.clone();
+            originalPos.y -= 1.3;
+            this.interaction.registerInteractable(glass, 'glass', originalPos);
             this.physics.addCylinderBody(glass, 0.13, 0.15, 0.6, 0.3, 'glass');
 
             // 初始化杯子容器
@@ -103,6 +106,14 @@ export class BarEnvironment {
         if (this.barTools.jigger) {
             this.interaction.registerInteractable(this.barTools.jigger, 'jigger', this.barTools.jigger.position.clone());
             this.physics.addCylinderBody(this.barTools.jigger, 0.09, 0.13, 0.18, 0.2);
+        }
+
+        // 註冊吉他為可互動物品(特殊類型：不會被拾取，而是觸發音樂)
+        if (this.guitar) {
+            // 計算吉他的世界位置
+            const guitarWorldPos = new THREE.Vector3();
+            this.guitar.getWorldPosition(guitarWorldPos);
+            this.interaction.registerInteractable(this.guitar, 'guitar', guitarWorldPos);
         }
 
         // 註冊材料瓶為可互動物品
@@ -171,9 +182,10 @@ export class BarEnvironment {
         displays.createAll();
         this.ingredientBottles = displays.getIngredientBottles();
 
-        // 5. 創建家具
+        // 5. 創建家具(包含音樂角落)
         const furniture = new BarFurniture(this.scene);
         furniture.createAll();
+        this.guitar = furniture.getGuitar();
 
         // 暫時註解掉裝飾,簡化場景
         // this.createBarDecoration();
