@@ -274,7 +274,7 @@ export class BarBottles {
         glassPositions.forEach(pos => {
             const glass = this.createMixingGlassForDrinking();
             // 從稍高的位置掉落,讓重力系統生效 - 提高0.5個單位
-            glass.position.set(pos.x, 3.0, pos.z); // 原本是 2.5，改成 3.0
+            glass.position.set(pos.x, 0, pos.z); // 原本是 2.5，改成 3.0
             this.glasses.push(glass);
             this.scene.add(glass);
         });
@@ -284,41 +284,41 @@ export class BarBottles {
      * 創建 Mixing Glass 飲用杯
      */
     createMixingGlassForDrinking() {
-        const glassGroup = new THREE.Group();
+    const glassGroup = new THREE.Group();
 
-        // 主杯身(高腰圓柱體,mixing glass特徵)
-        const glassBody = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.19, 0.16, 0.65, 16, 1, true),
-            new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.3, // 原本是 0.12，改成 0.3
-                shininess: 200,
-                specular: 0xaaaaaa,
-                side: THREE.DoubleSide
-            })
-        );
-        glassBody.position.y = 0.325;
+    // 主杯身(高腰圓柱體,mixing glass特徵)
+    const glassBody = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.19, 0.16, 0.65, 16, 1, true),
+        new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.3, // 原本是 0.12，改成 0.3
+            shininess: 200,
+            specular: 0xaaaaaa,
+            side: THREE.DoubleSide
+        })
+    );
+    glassBody.position.y = 0.325;
 
-        // 杯底加厚(mixing glass特徵)
-        const glassBase = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.16, 0.16, 0.08),
-            new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.4, // 原本是 0.2，改成 0.4
-                shininess: 200
-            })
-        );
-        glassBase.position.y = 0.04;
+    // 杯底加厚(mixing glass特徵)
+    const glassBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16, 0.16, 0.08),
+        new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.4, // 原本是 0.2，改成 0.4
+            shininess: 200
+        })
+    );
+    glassBase.position.y = 0.04;
 
-        glassGroup.add(glassBody);
-        glassGroup.add(glassBase);
-        glassGroup.castShadow = true;
-        glassGroup.userData.interactable = true;
+    glassGroup.add(glassBody);
+    glassGroup.add(glassBase);
+    glassGroup.castShadow = true;
+    glassGroup.userData.interactable = true;
 
-        return glassGroup;
-    }
+    return glassGroup;
+}
 
     /**
      * 獲取所有創建的酒瓶
