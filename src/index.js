@@ -242,6 +242,7 @@ class BarSimulator {
 
     /**
      * 尋找附近的容器（用於倒酒）
+     * 需要同時滿足：1) 準星指向容器 2) 距離夠近（約2.5m）
      */
     findNearbyContainer(sourceObject) {
         const allContainers = [
@@ -253,7 +254,24 @@ class BarSimulator {
             if (container === sourceObject) continue;
 
             const distance = sourceObject.position.distanceTo(container.position);
-            if (distance < 1.5) { // 1.5 米內可以倒酒
+            // 距離必須小於 2.5 米
+            if (distance > 2.5) {
+                continue;
+            }
+
+            // 計算相機到容器的方向
+            const cameraToContainer = new THREE.Vector3();
+            cameraToContainer.subVectors(container.position, this.camera.position).normalize();
+
+            // 計算相機朝向（準星方向）
+            const cameraDirection = new THREE.Vector3();
+            this.camera.getWorldDirection(cameraDirection);
+
+            // 計算角度（點積）
+            const dotProduct = cameraDirection.dot(cameraToContainer);
+
+            // 準星必須對準容器（角度小於30度，cos(30°) ≈ 0.866）
+            if (dotProduct >= 0.85) {
                 return container;
             }
         }

@@ -273,8 +273,8 @@ export class BarBottles {
 
         glassPositions.forEach(pos => {
             const glass = this.createMixingGlassForDrinking();
-            // 從稍高的位置掉落,讓重力系統生效 - 提高0.5個單位
-            glass.position.set(pos.x, 0, pos.z); // 原本是 2.5，改成 3.0
+            // 從稍高的位置掉落,讓重力系統生效 - 降低一個單位
+            glass.position.set(pos.x, -1, pos.z); // 降低一個單位：從 0 改成 -1
             this.glasses.push(glass);
             this.scene.add(glass);
         });
