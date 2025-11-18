@@ -109,22 +109,21 @@ body {
 
 /* 載入畫面 */
 #loading {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #FFD700;
-    font-size: 32px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000000;
+    color: #ffffff;
+    font-size: 48px;
     font-weight: bold;
-    z-index: 200;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    animation: loadingPulse 1.5s ease-in-out infinite;
-    text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.5);
-    background: linear-gradient(135deg, rgba(138, 43, 226, 0.9), rgba(75, 0, 130, 0.9));
-    padding: 30px 50px;
-    border-radius: 15px;
-    border: 2px solid rgba(255, 215, 0, 0.5);
-    backdrop-filter: blur(10px);
+    animation: loadingPulse 2s ease-in-out infinite;
 }
 
 #loading.hidden {
@@ -133,7 +132,7 @@ body {
 
 @keyframes loadingPulse {
     0%, 100% {
-        opacity: 0.4;
+        opacity: 0.3;
     }
     50% {
         opacity: 1;

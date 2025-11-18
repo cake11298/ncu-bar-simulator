@@ -85,7 +85,7 @@ export default class InteractionSystem {
      * @returns {Object|null} { object, type, distance }
      */
     checkTargeted() {
-        // 從相機中心發射射線
+        // 從相機中心發射射線（準心位置）
         this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
 
         // 檢測碰撞
@@ -95,7 +95,8 @@ export default class InteractionSystem {
         );
 
         if (intersects.length > 0) {
-            // 找到最近的物品
+            // 優先選擇準心直接指向的物品（第一個碰撞點）
+            // 這樣即使玩家在兩個物品中間，也會選擇準心指向的那個
             let targetObject = intersects[0].object;
 
             // 如果碰撞的是子物件，找到父級 Group
@@ -370,6 +371,11 @@ export default class InteractionSystem {
             let itemName = this.getTypeName(type);
             let additionalInfo = '';
 
+            // 特殊處理：吉他顯示「互動」而非「拾取」
+            if (type === 'guitar') {
+                return `按 E 互動 ${itemName} (${distance}m)`;
+            }
+
             // 如果是酒瓶，顯示酒類名稱
             if (type === 'bottle' && targetObj.userData.liquorType && this.cocktailSystem) {
                 const liquorType = targetObj.userData.liquorType;
@@ -415,7 +421,8 @@ export default class InteractionSystem {
             'bottle': '酒瓶',
             'glass': '杯子',
             'shaker': '搖酒器',
-            'jigger': '量酒器'
+            'jigger': '量酒器',
+            'guitar': '吉他'
         };
         return names[type] || '物品';
     }
