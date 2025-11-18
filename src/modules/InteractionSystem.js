@@ -175,10 +175,12 @@ export default class InteractionSystem {
                 this.physics.freezeBodyAt(object, originalPos, upright);
             }
         } else {
-            // 酒牆上的主要酒瓶可以放下
-            // (已移除放回原位的限制)
+            // 所有物品都只能放回原位，不能原地放下
+            // 這個 else 分支已經被停用
+            console.log('請按 R 放回原位');
+            return;
 
-            // 杯子、搖酒器、材料瓶等可以放在當前位置
+            // 以下程式碼已停用
             // 使用射線檢測找到下方最近的表面
             const surfacePosition = this.findNearestSurface(object.position);
 
@@ -351,15 +353,15 @@ export default class InteractionSystem {
 
             switch(type) {
                 case 'bottle':
-                    return `${itemName} | 按住滑鼠左鍵倒酒 | 按 Q 放下`;
+                    return `${itemName} | 按住滑鼠左鍵倒酒 | 按 R 放回酒牆`;
                 case 'glass':
-                    return `${itemName} | 按 Q 放下 | 按滑鼠右鍵喝掉`;
+                    return `${itemName} | 按滑鼠右鍵喝掉 | 按 R 放回原位`;
                 case 'shaker':
-                    return `${itemName} | 按 Q 放下 | 按住滑鼠左鍵搖晃`;
+                    return `${itemName} | 按住滑鼠左鍵搖晃 | 按 R 放回原位`;
                 case 'jigger':
-                    return `${itemName} | 按 Q 放下 | 用於精確量酒`;
+                    return `${itemName} | 用於精確量酒 | 按 R 放回原位`;
                 default:
-                    return `${itemName} | 按 Q 放下`;
+                    return `${itemName} | 按 R 放回原位`;
             }
         } else if (this.targetedObject) {
             const type = this.targetedObject.type;
