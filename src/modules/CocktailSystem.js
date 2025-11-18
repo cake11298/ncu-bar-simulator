@@ -45,7 +45,7 @@ export default class CocktailSystem {
         this.pourRateText = document.getElementById('pour-rate-text');
 
         // 倒酒速度（ml/秒）
-        this.pourRate = 50;
+        this.pourRate = 30; // 調慢速度，讓倒酒更精確
     }
 
     /**
@@ -291,7 +291,7 @@ export default class CocktailSystem {
 
         // 創建液體網格 - 使用橢圓梯形柱體(頂部略小於底部,更像真實液體)
         // 底部半徑略大,頂部半徑略小,形成自然的液體形狀
-        const liquidGeometry = new THREE.CylinderGeometry(0.13, 0.15, 0.1, 32); // 使用更多段數使其更平滑
+        const liquidGeometry = new THREE.CylinderGeometry(0.13, 0.15, 0.01, 32); // 初始高度很小
         const liquidMaterial = new THREE.MeshPhongMaterial({
             color: contents.color,
             transparent: true,
@@ -302,7 +302,8 @@ export default class CocktailSystem {
         });
 
         const liquidMesh = new THREE.Mesh(liquidGeometry, liquidMaterial);
-        liquidMesh.position.y = -0.25; // 杯子底部
+        // 將液體放置在杯子內部底部（稍微往上一點避免穿模）
+        liquidMesh.position.set(0, -0.29, 0);
         liquidMesh.visible = false; // 初始隱藏
 
         container.add(liquidMesh);
@@ -324,13 +325,13 @@ export default class CocktailSystem {
             contents.liquidMesh.visible = true;
 
             // 更新高度(根據容量) - 使用實際的圓柱體高度而不是拉伸
-            const maxHeight = 0.6; // 杯子高度
-            const liquidHeight = Math.min(maxHeight * fillRatio, maxHeight); // 確保不超過杯子高度
+            const maxHeight = 0.55; // 杯子可用高度（稍小於實際高度避免溢出）
+            const liquidHeight = Math.max(0.01, Math.min(maxHeight * fillRatio, maxHeight)); // 確保有最小高度且不超過杯子高度
 
             // 計算梯形柱體的半徑(底部大,頂部小,模擬液體表面張力)
             // 隨著液體增加,頂部半徑接近底部半徑
-            const bottomRadius = 0.15; // 底部半徑
-            const topRadius = 0.13 + (fillRatio * 0.02); // 頂部半徑隨液體量增加而增大
+            const bottomRadius = 0.14; // 底部半徑（稍小於杯子以避免穿模）
+            const topRadius = 0.12 + (fillRatio * 0.02); // 頂部半徑隨液體量增加而增大
 
             // 重新創建幾何體以獲得正確的橢圓梯形柱體(避免拉伸變形)
             const newGeometry = new THREE.CylinderGeometry(
@@ -342,8 +343,9 @@ export default class CocktailSystem {
             contents.liquidMesh.geometry.dispose(); // 釋放舊幾何體
             contents.liquidMesh.geometry = newGeometry;
 
-            // 定位液體(底部對齊杯子底部)
-            contents.liquidMesh.position.y = -0.3 + liquidHeight / 2;
+            // 定位液體(底部對齊杯子底部，從底部開始往上填充)
+            // 杯子底部在 y = -0.3，液體高度的一半就是中心點
+            contents.liquidMesh.position.y = -0.29 + liquidHeight / 2;
 
             // 更新顏色
             contents.liquidMesh.material.color.setHex(contents.color);
@@ -359,8 +361,9 @@ export default class CocktailSystem {
      * @param {THREE.Object3D} targetContainer - 目標容器
      * @param {string} liquorType - 酒類類型
      * @param {number} deltaTime - 時間增量
+     * @param {THREE.Camera} camera - 相機（可選，用於視角檢測）
      */
-    pour(bottle, targetContainer, liquorType, deltaTime) {
+    pour(bottle, targetContainer, liquorType, deltaTime, camera = null) {
         const contents = this.containerContents.get(targetContainer);
         if (!contents) return;
 
@@ -370,9 +373,34 @@ export default class CocktailSystem {
             return;
         }
 
-        // 倒酒速度（ml/秒）
-        const pourRate = 50;
-        const amountPoured = pourRate * deltaTime;
+        // 如果提供了相機，檢查距離和視角
+        if (camera) {
+            const distance = bottle.position.distanceTo(targetContainer.position);
+
+            // 距離必須小於 1.5 米
+            if (distance > 1.5) {
+                return;
+            }
+
+            // 計算相機到杯子的方向
+            const cameraToGlass = new THREE.Vector3();
+            cameraToGlass.subVectors(targetContainer.position, camera.position).normalize();
+
+            // 計算相機朝向
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+
+            // 計算角度（點積）
+            const dotProduct = cameraDirection.dot(cameraToGlass);
+
+            // 視角必須對準杯子（角度小於30度，cos(30°) ≈ 0.866）
+            if (dotProduct < 0.85) {
+                return;
+            }
+        }
+
+        // 倒酒速度（ml/秒）- 使用系統設定的速度
+        const amountPoured = this.pourRate * deltaTime;
 
         // 添加酒水（合併同類材料）
         const liquor = this.liquorDatabase.get(liquorType);
@@ -478,10 +506,9 @@ export default class CocktailSystem {
         if (shakerContents.volume <= 0) return; // Shaker 是空的
         if (targetContents.volume >= targetContents.maxVolume) return; // 目標容器已滿
 
-        // 倒酒速度（ml/秒）
-        const pourRate = 50;
+        // 倒酒速度（ml/秒）- 使用系統設定的速度
         const amountToPour = Math.min(
-            pourRate * deltaTime,
+            this.pourRate * deltaTime,
             shakerContents.volume, // Shaker 剩餘量
             targetContents.maxVolume - targetContents.volume // 目標容器剩餘空間
         );
@@ -595,28 +622,44 @@ export default class CocktailSystem {
      * @param {THREE.Object3D} target - 目標容器
      */
     createPourParticles(bottle, target) {
-        const particleCount = 100;
+        const particleCount = 200; // 增加粒子數量
         const particles = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
+        const velocities = []; // 儲存粒子速度
+
+        // 計算從瓶口到杯子的方向
+        const bottlePos = bottle.position.clone();
+        bottlePos.y -= 0.3; // 瓶口位置
+        const targetPos = target.position.clone();
 
         for (let i = 0; i < particleCount; i++) {
-            positions[i * 3] = 0;
-            positions[i * 3 + 1] = 0;
-            positions[i * 3 + 2] = 0;
+            // 初始化粒子在瓶口附近
+            const spread = 0.05;
+            positions[i * 3] = bottlePos.x + (Math.random() - 0.5) * spread;
+            positions[i * 3 + 1] = bottlePos.y;
+            positions[i * 3 + 2] = bottlePos.z + (Math.random() - 0.5) * spread;
+
+            // 計算速度（朝向杯子）
+            const velocity = new THREE.Vector3(
+                (targetPos.x - bottlePos.x) + (Math.random() - 0.5) * 0.2,
+                -1.0, // 向下
+                (targetPos.z - bottlePos.z) + (Math.random() - 0.5) * 0.2
+            );
+            velocities.push(velocity);
         }
 
         particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
         const particleMaterial = new THREE.PointsMaterial({
-            color: 0xffffff,
-            size: 0.02,
+            color: 0xaaccff, // 淡藍色，更明顯
+            size: 0.05, // 增大粒子尺寸
             transparent: true,
-            opacity: 0.6
+            opacity: 0.8
         });
 
         const particleSystem = new THREE.Points(particles, particleMaterial);
-        particleSystem.position.copy(bottle.position);
-        particleSystem.position.y -= 0.3; // 瓶口位置
+        particleSystem.userData.velocities = velocities; // 儲存速度
+        particleSystem.userData.bottlePosition = bottlePos;
 
         this.scene.add(particleSystem);
         this.particleSystems.set('pour', particleSystem);
@@ -1095,13 +1138,24 @@ export default class CocktailSystem {
             const particleSystem = this.particleSystems.get('pour');
             if (particleSystem) {
                 const positions = particleSystem.geometry.attributes.position.array;
+                const velocities = particleSystem.userData.velocities;
+                const bottlePos = particleSystem.userData.bottlePosition;
 
-                for (let i = 0; i < positions.length; i += 3) {
-                    positions[i + 1] -= deltaTime * 2; // 下降
+                for (let i = 0; i < positions.length / 3; i++) {
+                    const idx = i * 3;
+                    const velocity = velocities[i];
 
-                    // 重置粒子
-                    if (positions[i + 1] < -0.5) {
-                        positions[i + 1] = 0;
+                    // 應用速度
+                    positions[idx] += velocity.x * deltaTime * 2;
+                    positions[idx + 1] += velocity.y * deltaTime * 2;
+                    positions[idx + 2] += velocity.z * deltaTime * 2;
+
+                    // 重置粒子（當粒子落得太低時）
+                    if (positions[idx + 1] < bottlePos.y - 1.0) {
+                        const spread = 0.05;
+                        positions[idx] = bottlePos.x + (Math.random() - 0.5) * spread;
+                        positions[idx + 1] = bottlePos.y;
+                        positions[idx + 2] = bottlePos.z + (Math.random() - 0.5) * spread;
                     }
                 }
 
@@ -1111,5 +1165,279 @@ export default class CocktailSystem {
 
         // 更新喝酒動畫
         this.updateDrinkingAnimation();
+    }
+
+    /**
+     * 獲取經典調酒食譜列表（IBA經典調酒）
+     * @returns {Array} 食譜列表
+     */
+    getCocktailRecipes() {
+        return [
+            // === Unforgettable 經典不朽調酒 ===
+            {
+                name: 'Martini 馬丁尼',
+                ingredients: [
+                    { amount: '60ml', name: '琴酒 Gin' },
+                    { amount: '10ml', name: '不甜香艾酒 Dry Vermouth' }
+                ],
+                method: 'Stir（攪拌法）：將材料加冰攪拌後濾入冰鎮馬丁尼杯，可加檸檬皮裝飾。'
+            },
+            {
+                name: 'Vodka Martini 伏特加馬丁尼',
+                ingredients: [
+                    { amount: '60ml', name: '伏特加 Vodka' },
+                    { amount: '10ml', name: '不甜香艾酒 Dry Vermouth' }
+                ],
+                method: 'Stir：將材料加冰攪拌後濾入冰鎮馬丁尼杯，檸檬皮或橄欖裝飾。'
+            },
+            {
+                name: 'Negroni 內格羅尼',
+                ingredients: [
+                    { amount: '30ml', name: '琴酒 Gin' },
+                    { amount: '30ml', name: '金巴利 Campari' },
+                    { amount: '30ml', name: '甜香艾酒 Sweet Vermouth' }
+                ],
+                method: 'Build：將材料倒入裝滿冰塊的古典杯，攪拌均勻，柳橙皮裝飾。'
+            },
+            {
+                name: 'Margarita 瑪格麗特',
+                ingredients: [
+                    { amount: '50ml', name: '龍舌蘭 Tequila' },
+                    { amount: '20ml', name: '橙皮酒 Triple Sec' },
+                    { amount: '15ml', name: '萊姆汁 Lime Juice' }
+                ],
+                method: 'Shake：加冰搖盪後濾入杯緣抹鹽的杯中，萊姆角裝飾。'
+            },
+            {
+                name: 'Daiquiri 黛克瑞',
+                ingredients: [
+                    { amount: '60ml', name: '蘭姆酒 Rum' },
+                    { amount: '20ml', name: '萊姆汁 Lime Juice' },
+                    { amount: '10ml', name: '糖漿 Simple Syrup' }
+                ],
+                method: 'Shake：加冰搖盪後濾入冰鎮雞尾酒杯。'
+            },
+            {
+                name: 'Cosmopolitan 柯夢波丹',
+                ingredients: [
+                    { amount: '40ml', name: '伏特加 Vodka' },
+                    { amount: '15ml', name: '橙皮酒 Triple Sec' },
+                    { amount: '15ml', name: '萊姆汁 Lime Juice' },
+                    { amount: '30ml', name: '蔓越莓汁 Cranberry Juice' }
+                ],
+                method: 'Shake：加冰搖盪後濾入馬丁尼杯，萊姆皮或蔓越莓裝飾。'
+            },
+            {
+                name: 'Mojito 莫希托',
+                ingredients: [
+                    { amount: '45ml', name: '蘭姆酒 Rum' },
+                    { amount: '20ml', name: '萊姆汁 Lime Juice' },
+                    { amount: '20ml', name: '糖漿 Simple Syrup' },
+                    { amount: '適量', name: '蘇打水 Soda Water' }
+                ],
+                method: 'Muddle：在杯中壓碎薄荷葉與糖，加冰、蘭姆酒、萊姆汁，上方加蘇打水。'
+            },
+            {
+                name: 'Piña Colada 椰林風情',
+                ingredients: [
+                    { amount: '50ml', name: '蘭姆酒 Rum' },
+                    { amount: '30ml', name: '椰漿 Coconut Cream' },
+                    { amount: '50ml', name: '鳳梨汁 Pineapple Juice' }
+                ],
+                method: 'Blend：與碎冰混合打碎，倒入颶風杯，鳳梨角和櫻桃裝飾。'
+            },
+
+            // === Contemporary Classics 當代經典調酒 ===
+            {
+                name: 'Whiskey Sour 威士忌酸酒',
+                ingredients: [
+                    { amount: '50ml', name: '威士忌 Whiskey' },
+                    { amount: '25ml', name: '檸檬汁 Lemon Juice' },
+                    { amount: '15ml', name: '糖漿 Simple Syrup' }
+                ],
+                method: 'Shake：加冰搖盪後濾入古典杯，可加蛋白增加口感。'
+            },
+            {
+                name: 'Gin Tonic 琴湯尼',
+                ingredients: [
+                    { amount: '50ml', name: '琴酒 Gin' },
+                    { amount: '適量', name: '通寧水 Tonic Water' }
+                ],
+                method: 'Build：在高球杯中加冰塊和琴酒，補滿通寧水，萊姆角裝飾。'
+            },
+            {
+                name: 'Cuba Libre 自由古巴',
+                ingredients: [
+                    { amount: '50ml', name: '蘭姆酒 Rum' },
+                    { amount: '10ml', name: '萊姆汁 Lime Juice' },
+                    { amount: '適量', name: '可樂 Cola' }
+                ],
+                method: 'Build：在高球杯中加冰塊、蘭姆酒和萊姆汁，補滿可樂。'
+            },
+            {
+                name: 'Bloody Mary 血腥瑪麗',
+                ingredients: [
+                    { amount: '45ml', name: '伏特加 Vodka' },
+                    { amount: '90ml', name: '番茄汁 Tomato Juice' },
+                    { amount: '15ml', name: '檸檬汁 Lemon Juice' },
+                    { amount: '少許', name: '安格仕苦精 Angostura Bitters' }
+                ],
+                method: 'Roll：在雪克杯中倒入材料與冰塊，來回倒入另一個杯子混合。'
+            },
+            {
+                name: 'Sea Breeze 海風',
+                ingredients: [
+                    { amount: '40ml', name: '伏特加 Vodka' },
+                    { amount: '60ml', name: '蔓越莓汁 Cranberry Juice' },
+                    { amount: '30ml', name: '葡萄柚汁 Grapefruit Juice' }
+                ],
+                method: 'Build：在裝滿冰塊的高球杯中依序倒入材料，攪拌均勻。'
+            },
+            {
+                name: 'Tequila Sunrise 龍舌蘭日出',
+                ingredients: [
+                    { amount: '45ml', name: '龍舌蘭 Tequila' },
+                    { amount: '90ml', name: '柳橙汁 Orange Juice' },
+                    { amount: '15ml', name: '紅石榴糖漿 Grenadine' }
+                ],
+                method: 'Build：在高球杯中加冰、龍舌蘭和柳橙汁，最後慢慢倒入紅石榴糖漿形成漸層。'
+            },
+
+            // === 更多經典調酒 ===
+            {
+                name: 'Screwdriver 螺絲起子',
+                ingredients: [
+                    { amount: '50ml', name: '伏特加 Vodka' },
+                    { amount: '100ml', name: '柳橙汁 Orange Juice' }
+                ],
+                method: 'Build：在裝滿冰塊的高球杯中倒入伏特加，補滿柳橙汁，攪拌均勻。'
+            },
+            {
+                name: 'Mai Tai 邁泰',
+                ingredients: [
+                    { amount: '40ml', name: '蘭姆酒 Rum' },
+                    { amount: '20ml', name: '橙皮酒 Triple Sec' },
+                    { amount: '15ml', name: '萊姆汁 Lime Juice' },
+                    { amount: '10ml', name: '糖漿 Simple Syrup' }
+                ],
+                method: 'Shake：加冰搖盪後濾入裝滿碎冰的古典杯，薄荷和萊姆裝飾。'
+            },
+            {
+                name: 'Sidecar 側車',
+                ingredients: [
+                    { amount: '50ml', name: '白蘭地 Brandy' },
+                    { amount: '20ml', name: '橙皮酒 Triple Sec' },
+                    { amount: '20ml', name: '檸檬汁 Lemon Juice' }
+                ],
+                method: 'Shake：加冰搖盪後濾入杯緣抹糖的雞尾酒杯。'
+            },
+            {
+                name: 'Manhattan 曼哈頓',
+                ingredients: [
+                    { amount: '50ml', name: '威士忌 Whiskey' },
+                    { amount: '20ml', name: '甜香艾酒 Sweet Vermouth' },
+                    { amount: '2滴', name: '安格仕苦精 Angostura Bitters' }
+                ],
+                method: 'Stir：將材料加冰攪拌後濾入馬丁尼杯，櫻桃裝飾。'
+            },
+            {
+                name: 'Americano 美國佬',
+                ingredients: [
+                    { amount: '30ml', name: '金巴利 Campari' },
+                    { amount: '30ml', name: '甜香艾酒 Sweet Vermouth' },
+                    { amount: '適量', name: '蘇打水 Soda Water' }
+                ],
+                method: 'Build：在裝滿冰塊的古典杯中倒入金巴利和甜香艾酒，補滿蘇打水。'
+            },
+            {
+                name: 'Gimlet 琴蕾',
+                ingredients: [
+                    { amount: '60ml', name: '琴酒 Gin' },
+                    { amount: '15ml', name: '萊姆汁 Lime Juice' },
+                    { amount: '10ml', name: '糖漿 Simple Syrup' }
+                ],
+                method: 'Shake：加冰搖盪後濾入冰鎮雞尾酒杯，萊姆角裝飾。'
+            },
+            {
+                name: 'French 75 法式75',
+                ingredients: [
+                    { amount: '30ml', name: '琴酒 Gin' },
+                    { amount: '15ml', name: '檸檬汁 Lemon Juice' },
+                    { amount: '10ml', name: '糖漿 Simple Syrup' },
+                    { amount: '適量', name: '香檳（可用蘇打水代替）' }
+                ],
+                method: 'Shake前三種材料後濾入香檳杯，補滿香檳或蘇打水。'
+            },
+            {
+                name: 'Aperol Spritz 艾普羅氣泡酒',
+                ingredients: [
+                    { amount: '60ml', name: '利口酒 Liqueur' },
+                    { amount: '90ml', name: '氣泡酒（可用蘇打水代替）' },
+                    { amount: '30ml', name: '蘇打水 Soda Water' }
+                ],
+                method: 'Build：在裝滿冰塊的酒杯中依序倒入材料，柳橙片裝飾。'
+            },
+            {
+                name: 'Moscow Mule 莫斯科騾子',
+                ingredients: [
+                    { amount: '45ml', name: '伏特加 Vodka' },
+                    { amount: '15ml', name: '萊姆汁 Lime Juice' },
+                    { amount: '適量', name: '薑汁汽水（可用蘇打水+糖漿代替）' }
+                ],
+                method: 'Build：在銅製馬克杯或高球杯中加冰、伏特加和萊姆汁，補滿薑汁汽水。'
+            },
+            {
+                name: 'Caipirinha 卡琵莉亞',
+                ingredients: [
+                    { amount: '60ml', name: '蘭姆酒 Rum（傳統用 Cachaça）' },
+                    { amount: '半顆', name: '萊姆 Lime' },
+                    { amount: '2茶匙', name: '糖 Sugar' }
+                ],
+                method: 'Muddle：在古典杯中壓碎萊姆塊與糖，加入碎冰和蘭姆酒，攪拌均勻。'
+            },
+            {
+                name: 'Long Island Iced Tea 長島冰茶',
+                ingredients: [
+                    { amount: '15ml', name: '伏特加 Vodka' },
+                    { amount: '15ml', name: '蘭姆酒 Rum' },
+                    { amount: '15ml', name: '琴酒 Gin' },
+                    { amount: '15ml', name: '龍舌蘭 Tequila' },
+                    { amount: '15ml', name: '橙皮酒 Triple Sec' },
+                    { amount: '25ml', name: '檸檬汁 Lemon Juice' },
+                    { amount: '30ml', name: '糖漿 Simple Syrup' },
+                    { amount: '適量', name: '可樂 Cola' }
+                ],
+                method: 'Shake前七種材料後濾入裝滿冰塊的柯林斯杯，上方補可樂，檸檬片裝飾。'
+            },
+            {
+                name: 'Vesper 薇絲朋',
+                ingredients: [
+                    { amount: '45ml', name: '琴酒 Gin' },
+                    { amount: '15ml', name: '伏特加 Vodka' },
+                    { amount: '7.5ml', name: '不甜香艾酒 Dry Vermouth' }
+                ],
+                method: 'Shake：加冰搖盪後濾入馬丁尼杯，檸檬皮裝飾。（007電影中詹姆士龐德的最愛）'
+            },
+            {
+                name: 'Tom Collins 湯姆柯林斯',
+                ingredients: [
+                    { amount: '45ml', name: '琴酒 Gin' },
+                    { amount: '30ml', name: '檸檬汁 Lemon Juice' },
+                    { amount: '15ml', name: '糖漿 Simple Syrup' },
+                    { amount: '適量', name: '蘇打水 Soda Water' }
+                ],
+                method: 'Shake前三種材料後濾入裝滿冰塊的柯林斯杯，補滿蘇打水，檸檬片和櫻桃裝飾。'
+            },
+            {
+                name: 'Bramble 荊棘',
+                ingredients: [
+                    { amount: '40ml', name: '琴酒 Gin' },
+                    { amount: '25ml', name: '檸檬汁 Lemon Juice' },
+                    { amount: '10ml', name: '糖漿 Simple Syrup' },
+                    { amount: '15ml', name: '紅石榴糖漿 Grenadine' }
+                ],
+                method: 'Shake前三種材料後倒入裝滿碎冰的古典杯，淋上紅石榴糖漿形成漸層，黑莓裝飾。'
+            }
+        ];
     }
 }
