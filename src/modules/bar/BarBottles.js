@@ -273,8 +273,8 @@ export class BarBottles {
 
         glassPositions.forEach(pos => {
             const glass = this.createMixingGlassForDrinking();
-            // 從稍高的位置掉落,讓重力系統生效
-            glass.position.set(pos.x, 2.5, pos.z);
+            // 從稍高的位置掉落,讓重力系統生效 - 提高0.5個單位
+            glass.position.set(pos.x, 3.0, pos.z); // 原本是 2.5，改成 3.0
             this.glasses.push(glass);
             this.scene.add(glass);
         });
@@ -292,7 +292,7 @@ export class BarBottles {
             new THREE.MeshPhongMaterial({
                 color: 0xffffff,
                 transparent: true,
-                opacity: 0.12,
+                opacity: 0.3, // 原本是 0.12，改成 0.3
                 shininess: 200,
                 specular: 0xaaaaaa,
                 side: THREE.DoubleSide
@@ -306,7 +306,7 @@ export class BarBottles {
             new THREE.MeshPhongMaterial({
                 color: 0xffffff,
                 transparent: true,
-                opacity: 0.2,
+                opacity: 0.4, // 原本是 0.2，改成 0.4
                 shininess: 200
             })
         );

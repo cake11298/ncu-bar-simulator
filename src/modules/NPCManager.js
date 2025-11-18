@@ -217,29 +217,35 @@ export class NPCManager {
 
     // 新增：播放旋律的方法
     playMelody() {
+        // 8-bit 風格的簡單旋律（超級瑪利歐風格）
         const melody = [
-            {note: 261.63, time: 0, duration: 0.5},    // C4
-            {note: 293.66, time: 0.5, duration: 0.5},  // D4
-            {note: 329.63, time: 1, duration: 0.5},    // E4
-            {note: 293.66, time: 1.5, duration: 0.5},  // D4
-            {note: 261.63, time: 2, duration: 1},      // C4
-            {note: 392.00, time: 3, duration: 0.5},    // G4
-            {note: 349.23, time: 3.5, duration: 0.5},  // F4
-            {note: 329.63, time: 4, duration: 1},      // E4
+            {note: 659.25, time: 0, duration: 0.15},      // E5
+            {note: 659.25, time: 0.2, duration: 0.15},    // E5
+            {note: 0, time: 0.4, duration: 0.15},         // 休止符
+            {note: 659.25, time: 0.6, duration: 0.15},    // E5
+            {note: 0, time: 0.8, duration: 0.15},         // 休止符
+            {note: 523.25, time: 1.0, duration: 0.15},    // C5
+            {note: 659.25, time: 1.2, duration: 0.15},    // E5
+            {note: 0, time: 1.4, duration: 0.15},         // 休止符
+            {note: 783.99, time: 1.6, duration: 0.3},     // G5
+            {note: 0, time: 2.0, duration: 0.3},          // 休止符
+            {note: 392.00, time: 2.4, duration: 0.3},     // G4
         ];
         
         const startTime = this.audioContext.currentTime;
         
         melody.forEach(note => {
+            if (note.note === 0) return; // 跳過休止符
+            
             const oscillator = this.audioContext.createOscillator();
             const noteGain = this.audioContext.createGain();
             
-            oscillator.type = 'triangle';
+            oscillator.type = 'square'; // 8-bit 方波音色
             oscillator.frequency.setValueAtTime(note.note, startTime + note.time);
             
-            // 音量包絡
+            // 8-bit 風格的音量包絡（快速衰減）
             noteGain.gain.setValueAtTime(0, startTime + note.time);
-            noteGain.gain.linearRampToValueAtTime(0.4, startTime + note.time + 0.01);
+            noteGain.gain.linearRampToValueAtTime(0.3, startTime + note.time + 0.01);
             noteGain.gain.exponentialRampToValueAtTime(0.001, 
                 startTime + note.time + note.duration);
             
@@ -256,31 +262,31 @@ export class NPCManager {
                 if (this.musicPlaying) {
                     this.playMelody();
                 }
-            }, 5000);
+            }, 2800); // 2.8秒後重複
         }
     }
 
-    // 新增：播放鼓點的方法
+    // 新增：播放鼓點的方法（8-bit 風格）
     playDrums() {
-        const drumPattern = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]; // 每0.5秒一下
+        const drumPattern = [0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4]; // 8-bit 節奏
         const startTime = this.audioContext.currentTime;
         
         drumPattern.forEach(time => {
             const oscillator = this.audioContext.createOscillator();
             const drumGain = this.audioContext.createGain();
             
-            oscillator.type = 'triangle';
-            oscillator.frequency.setValueAtTime(60, startTime + time); // 低頻鼓聲
+            oscillator.type = 'triangle'; // 使用三角波
+            oscillator.frequency.setValueAtTime(80, startTime + time); // 更低的鼓聲頻率
             
             drumGain.gain.setValueAtTime(0, startTime + time);
-            drumGain.gain.linearRampToValueAtTime(0.2, startTime + time + 0.01);
-            drumGain.gain.exponentialRampToValueAtTime(0.001, startTime + time + 0.2);
+            drumGain.gain.linearRampToValueAtTime(0.25, startTime + time + 0.005);
+            drumGain.gain.exponentialRampToValueAtTime(0.001, startTime + time + 0.1);
             
             oscillator.connect(drumGain);
             drumGain.connect(this.musicGainNode);
             
             oscillator.start(startTime + time);
-            oscillator.stop(startTime + time + 0.2);
+            oscillator.stop(startTime + time + 0.1);
         });
         
         // 循環播放鼓點
@@ -289,7 +295,7 @@ export class NPCManager {
                 if (this.musicPlaying) {
                     this.playDrums();
                 }
-            }, 4000);
+            }, 2800); // 與旋律同步
         }
     }
     
@@ -735,27 +741,28 @@ export class NPCManager {
                 nearInteractable = true;
                 if (!closestNPC || distance < minDistance) {
                     closestInteractable = obj;
+                    minDistance = distance; // 更新最小距離
                 }
             }
         }
         
-        // 更新互動提示
+        // 更新互動提示 - 修改這裡
         const hint = document.getElementById('interaction-hint');
         if (hint) {
-            if (nearNPC || nearInteractable) {
-                hint.classList.add('active');
-                if (closestInteractable) {
-                    if (closestInteractable.type === 'music') {
-                        const action = this.musicPlaying ? '關閉音樂' : '播放音樂';
-                        hint.textContent = `按下 E ${action}`;
-                    } else {
-                        hint.textContent = `按下 E 與 ${closestInteractable.name} 互動`;
-                    }
-                } else if (closestNPC) {
-                    hint.textContent = `按下 E 與 ${closestNPC.userData.name} 交談`;
+            // 優先顯示最近的互動對象
+            if (closestInteractable && (!closestNPC || minDistance === playerPosition.distanceTo(closestInteractable.position))) {
+                hint.classList.add('visible'); // 改用 visible 而不是 active
+                if (closestInteractable.type === 'music') {
+                    const action = this.musicPlaying ? '關閉音樂' : '播放音樂';
+                    hint.textContent = `按 E ${action}`;
+                } else {
+                    hint.textContent = `按 E 與 ${closestInteractable.name} 互動`;
                 }
+            } else if (closestNPC) {
+                hint.classList.add('visible');
+                hint.textContent = `按 E 與 ${closestNPC.userData.name} 交談`;
             } else {
-                hint.classList.remove('active');
+                hint.classList.remove('visible');
             }
         }
         

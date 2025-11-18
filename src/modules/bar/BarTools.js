@@ -98,7 +98,7 @@ export class BarTools {
 
         shakerGroup.add(shakerBottom);
         shakerGroup.add(shakerTop);
-        shakerGroup.position.set(-1.8, 1.10, -2.2);
+        shakerGroup.position.set(1.5, 1.10, -2.2);
         shakerGroup.castShadow = true;
         this.scene.add(shakerGroup);
 

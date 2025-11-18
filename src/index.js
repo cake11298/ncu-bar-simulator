@@ -18,7 +18,8 @@ class BarSimulator {
         this.lastReturn = false;
         this.lastRightMouse = false;
         this.lastGiveToNPC = false;
-        this.isPaused = false; // 遊戲暫停狀態
+        this.isPaused = false;
+        this.targetOutline = null; // 新增：用於顯示目標外框
         this.init();
     }
     
@@ -148,6 +149,14 @@ class BarSimulator {
         // === 調酒互動 ===
         const heldObject = this.interactionSystem.getHeldObject();
         const heldType = this.interactionSystem.getHeldObjectType();
+
+        if (heldObject && (heldType === 'bottle' || heldType === 'shaker')) {
+            const nearbyTarget = this.findNearbyContainer(heldObject);
+            this.highlightTarget(nearbyTarget);
+        } else {
+            this.highlightTarget(null);
+        }
+
 
         // 滑鼠左鍵：倒酒 或 搖酒
         if (this.playerController.isLeftMouseHeld() && heldObject) {
@@ -384,6 +393,29 @@ class BarSimulator {
             this.isPaused = true;
             // 解除滑鼠鎖定
             document.exitPointerLock();
+        }
+    }
+
+    highlightTarget(target) {
+        // 移除舊的外框
+        if (this.targetOutline) {
+            this.scene.remove(this.targetOutline);
+            this.targetOutline = null;
+        }
+
+        // 如果有新目標，創建黃色外框
+        if (target) {
+            const outlineGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.7, 16, 1, true);
+            const outlineMaterial = new THREE.MeshBasicMaterial({
+                color: 0xFFD700,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+            this.targetOutline = new THREE.Mesh(outlineGeometry, outlineMaterial);
+            this.targetOutline.position.copy(target.position);
+            this.targetOutline.position.y += 0.35;
+            this.scene.add(this.targetOutline);
         }
     }
 
