@@ -268,7 +268,22 @@ class BarSimulator {
         const hintElement = document.getElementById('interaction-hint');
         if (!hintElement) return;
 
-        const hint = this.interactionSystem.getInteractionHint();
+        // 優先顯示物品互動提示
+        let hint = this.interactionSystem.getInteractionHint();
+
+        // 如果沒有物品互動提示，檢查是否靠近 NPC
+        if (!hint) {
+            const npcTarget = this.npcManager.checkInteractions(this.playerController.position);
+            if (npcTarget.npc) {
+                hint = `按 E 與 ${npcTarget.npc.userData.name} 交談`;
+            } else if (npcTarget.interactable) {
+                if (npcTarget.interactable.type === 'music') {
+                    const action = this.npcManager.musicPlaying ? '關閉音樂' : '播放音樂';
+                    hint = `按 E ${action}`;
+                }
+            }
+        }
+
         hintElement.textContent = hint;
 
         if (hint) {

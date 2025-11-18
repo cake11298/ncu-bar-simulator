@@ -25,7 +25,11 @@ module.exports = {
     }),
   ],
   devServer: {
-    static: './public',
+    static: {
+      directory: path.join(__dirname, 'dist'),
+    },
     hot: true,
+    port: 8080,
+    open: true,
   },
 };
