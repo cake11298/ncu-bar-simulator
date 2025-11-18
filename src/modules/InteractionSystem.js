@@ -181,15 +181,29 @@ export default class InteractionSystem {
                 return; // 不執行放下操作
             }
 
-            // 杯子、搖酒器等可以放在當前位置（會掉落）
-            // 啟用物理模擬
-            this.physics.setBodyEnabled(object, true);
+            // 杯子、搖酒器等可以放在當前位置
+            // 使用射線檢測找到下方最近的表面
+            const surfacePosition = this.findNearestSurface(object.position);
 
-            // 給予較大的向下速度，避免懸空
-            this.physics.setBodyVelocity(
-                object,
-                new THREE.Vector3(0, -2.0, 0) // 增加向下速度避免懸空
-            );
+            if (surfacePosition) {
+                // 將物品放置在檢測到的表面上
+                object.position.copy(surfacePosition);
+                object.position.y += 0.35; // 稍微抬高避免穿模
+
+                // 重置旋轉為垂直站立
+                const upright = new THREE.Quaternion(0, 0, 0, 1);
+                object.quaternion.copy(upright);
+
+                // 凍結在該位置
+                this.physics.freezeBodyAt(object, object.position, upright);
+            } else {
+                // 如果沒有檢測到表面，使用物理掉落
+                this.physics.setBodyEnabled(object, true);
+                this.physics.setBodyVelocity(
+                    object,
+                    new THREE.Vector3(0, -3.0, 0)
+                );
+            }
         }
 
         // 重新加入可互動列表
@@ -198,6 +212,27 @@ export default class InteractionSystem {
         // 清空手持狀態
         this.heldObject = null;
         this.isHolding = false;
+    }
+
+    /**
+     * 尋找物品下方最近的表面
+     * @param {THREE.Vector3} position - 物品位置
+     * @returns {THREE.Vector3|null} 表面位置
+     */
+    findNearestSurface(position) {
+        // 使用物理系統的射線檢測向下發射射線
+        const from = position.clone();
+        const to = position.clone();
+        to.y -= 10; // 向下檢測 10 米
+
+        const result = this.physics.raycast(from, to);
+
+        if (result && result.point) {
+            return result.point;
+        }
+
+        // 如果沒有檢測到，返回地面位置
+        return new THREE.Vector3(position.x, 0, position.z);
     }
 
     /**
