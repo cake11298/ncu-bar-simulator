@@ -289,14 +289,16 @@ export default class CocktailSystem {
         const contents = this.containerContents.get(container);
         if (!contents) return;
 
-        // 創建液體網格（圓柱體）- 初始高度設為0.1，後續會動態調整
-        const liquidGeometry = new THREE.CylinderGeometry(0.14, 0.14, 0.1, 16);
+        // 創建液體網格 - 使用橢圓梯形柱體(頂部略小於底部,更像真實液體)
+        // 底部半徑略大,頂部半徑略小,形成自然的液體形狀
+        const liquidGeometry = new THREE.CylinderGeometry(0.13, 0.15, 0.1, 32); // 使用更多段數使其更平滑
         const liquidMaterial = new THREE.MeshPhongMaterial({
             color: contents.color,
             transparent: true,
-            opacity: 0.7,
-            shininess: 30,
-            side: THREE.DoubleSide
+            opacity: 0.75, // 略微提高不透明度,更像真實液體
+            shininess: 80, // 增加光澤度
+            side: THREE.DoubleSide,
+            reflectivity: 0.3 // 添加反射效果
         });
 
         const liquidMesh = new THREE.Mesh(liquidGeometry, liquidMaterial);
@@ -321,16 +323,26 @@ export default class CocktailSystem {
             // 顯示液體
             contents.liquidMesh.visible = true;
 
-            // 更新高度（根據容量）- 使用實際的圓柱體高度而不是拉伸
+            // 更新高度(根據容量) - 使用實際的圓柱體高度而不是拉伸
             const maxHeight = 0.6; // 杯子高度
-            const liquidHeight = maxHeight * fillRatio;
+            const liquidHeight = Math.min(maxHeight * fillRatio, maxHeight); // 確保不超過杯子高度
 
-            // 重新創建幾何體以獲得正確的高度（避免拉伸變形）
-            const newGeometry = new THREE.CylinderGeometry(0.14, 0.14, liquidHeight, 16);
+            // 計算梯形柱體的半徑(底部大,頂部小,模擬液體表面張力)
+            // 隨著液體增加,頂部半徑接近底部半徑
+            const bottomRadius = 0.15; // 底部半徑
+            const topRadius = 0.13 + (fillRatio * 0.02); // 頂部半徑隨液體量增加而增大
+
+            // 重新創建幾何體以獲得正確的橢圓梯形柱體(避免拉伸變形)
+            const newGeometry = new THREE.CylinderGeometry(
+                topRadius,      // 頂部半徑
+                bottomRadius,   // 底部半徑
+                liquidHeight,   // 高度
+                32              // 段數(更平滑)
+            );
             contents.liquidMesh.geometry.dispose(); // 釋放舊幾何體
             contents.liquidMesh.geometry = newGeometry;
 
-            // 定位液體（底部對齊杯子底部）
+            // 定位液體(底部對齊杯子底部)
             contents.liquidMesh.position.y = -0.3 + liquidHeight / 2;
 
             // 更新顏色
