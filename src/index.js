@@ -18,6 +18,7 @@ class BarSimulator {
         this.lastReturn = false;
         this.lastRightMouse = false;
         this.lastGiveToNPC = false;
+        this.isPaused = false; // 遊戲暫停狀態
         this.init();
     }
     
@@ -64,10 +65,16 @@ class BarSimulator {
         
         // 設定視窗調整
         window.addEventListener('resize', () => this.onWindowResize());
-        
+
+        // 初始化食譜系統
+        this.initRecipeSystem();
+
+        // 設定按鍵監聽（M鍵顯示食譜，P鍵顯示製作人資訊）
+        this.setupUIControls();
+
         // 隱藏載入畫面
         document.getElementById('loading').classList.add('hidden');
-        
+
         // 開始動畫
         this.animate();
     }
@@ -83,6 +90,12 @@ class BarSimulator {
 
         const deltaTime = this.clock.getDelta();
         const elapsedTime = this.clock.getElapsedTime();
+
+        // 如果遊戲暫停（顯示食譜或製作人資訊），不更新遊戲邏輯
+        if (this.isPaused) {
+            this.renderer.render(this.scene, this.camera);
+            return;
+        }
 
         // 更新各個系統
         this.playerController.update(deltaTime);
@@ -154,7 +167,8 @@ class BarSimulator {
                 const nearbyGlass = this.findNearbyContainer(heldObject);
                 if (nearbyGlass) {
                     const liquorType = heldObject.userData.liquorType;
-                    this.cocktailSystem.pour(heldObject, nearbyGlass, liquorType, deltaTime);
+                    // 傳入相機以進行視角和距離檢測
+                    this.cocktailSystem.pour(heldObject, nearbyGlass, liquorType, deltaTime, this.camera);
                 }
             } else if (heldType === 'shaker') {
                 // Shaker 邏輯：如果有內容且附近有容器，優先倒酒；否則搖酒
@@ -279,6 +293,133 @@ class BarSimulator {
         setTimeout(() => {
             messageElement.classList.remove('visible');
         }, 3000);
+    }
+
+    /**
+     * 初始化食譜系統
+     */
+    initRecipeSystem() {
+        // 獲取可用的材料
+        const availableIngredients = Array.from(this.cocktailSystem.liquorDatabase.keys());
+
+        // 定義經典IBA調酒食譜（至少25個）
+        this.cocktailRecipes = this.cocktailSystem.getCocktailRecipes();
+
+        // 載入食譜到UI
+        this.loadRecipesToUI();
+    }
+
+    /**
+     * 載入食譜到UI
+     */
+    loadRecipesToUI() {
+        const recipeContent = document.getElementById('recipe-content');
+        if (!recipeContent) return;
+
+        recipeContent.innerHTML = '';
+
+        this.cocktailRecipes.forEach(recipe => {
+            const card = document.createElement('div');
+            card.className = 'recipe-card';
+
+            const ingredientsList = recipe.ingredients.map(ing => {
+                return `<li>${ing.amount} - ${ing.name}</li>`;
+            }).join('');
+
+            card.innerHTML = `
+                <h3>${recipe.name}</h3>
+                <ul class="recipe-ingredients">
+                    ${ingredientsList}
+                </ul>
+                <p class="recipe-method">${recipe.method}</p>
+            `;
+
+            recipeContent.appendChild(card);
+        });
+    }
+
+    /**
+     * 設定UI控制（M鍵和P鍵）
+     */
+    setupUIControls() {
+        let lastMKey = false;
+        let lastPKey = false;
+
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+
+            // M鍵：顯示/隱藏食譜面板
+            if (key === 'm' && !lastMKey) {
+                this.toggleRecipePanel();
+                lastMKey = true;
+            }
+
+            // P鍵：顯示/隱藏製作人資訊面板
+            if (key === 'p' && !lastPKey) {
+                this.toggleCreditsPanel();
+                lastPKey = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+
+            if (key === 'm') {
+                lastMKey = false;
+            }
+
+            if (key === 'p') {
+                lastPKey = false;
+            }
+        });
+    }
+
+    /**
+     * 切換食譜面板
+     */
+    toggleRecipePanel() {
+        const panel = document.getElementById('recipe-panel');
+        if (!panel) return;
+
+        const isVisible = panel.style.display === 'block';
+
+        if (isVisible) {
+            panel.style.display = 'none';
+            this.isPaused = false;
+            // 恢復滑鼠鎖定
+            if (document.pointerLockElement === null) {
+                document.body.requestPointerLock();
+            }
+        } else {
+            panel.style.display = 'block';
+            this.isPaused = true;
+            // 解除滑鼠鎖定
+            document.exitPointerLock();
+        }
+    }
+
+    /**
+     * 切換製作人資訊面板
+     */
+    toggleCreditsPanel() {
+        const panel = document.getElementById('credits-panel');
+        if (!panel) return;
+
+        const isVisible = panel.style.display === 'block';
+
+        if (isVisible) {
+            panel.style.display = 'none';
+            this.isPaused = false;
+            // 恢復滑鼠鎖定
+            if (document.pointerLockElement === null) {
+                document.body.requestPointerLock();
+            }
+        } else {
+            panel.style.display = 'block';
+            this.isPaused = true;
+            // 解除滑鼠鎖定
+            document.exitPointerLock();
+        }
     }
 }
 

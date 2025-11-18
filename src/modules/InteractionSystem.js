@@ -160,6 +160,7 @@ export default class InteractionSystem {
         }
 
         const object = this.heldObject;
+        const objectType = this.objectTypes.get(object);
 
         if (returnToOriginal) {
             // 放回原位（酒牆）
@@ -174,14 +175,20 @@ export default class InteractionSystem {
                 this.physics.freezeBodyAt(object, originalPos, upright);
             }
         } else {
-            // 放在當前位置（會掉落）
+            // 酒瓶類型不允許放在當前位置，只能放回原位
+            if (objectType === 'bottle') {
+                console.log('酒瓶只能放回原位（按 R 鍵）');
+                return; // 不執行放下操作
+            }
+
+            // 杯子、搖酒器等可以放在當前位置（會掉落）
             // 啟用物理模擬
             this.physics.setBodyEnabled(object, true);
 
-            // 給予微小的向下速度
+            // 給予較大的向下速度，避免懸空
             this.physics.setBodyVelocity(
                 object,
-                new THREE.Vector3(0, -0.5, 0)
+                new THREE.Vector3(0, -2.0, 0) // 增加向下速度避免懸空
             );
         }
 
@@ -312,7 +319,7 @@ export default class InteractionSystem {
 
             switch(type) {
                 case 'bottle':
-                    return `${itemName} | 按 Q 放下 | 按住滑鼠左鍵倒酒 | 按 R 放回酒牆`;
+                    return `${itemName} | 按住滑鼠左鍵倒酒 | 按 R 放回酒牆`;
                 case 'glass':
                     return `${itemName} | 按 Q 放下 | 按滑鼠右鍵喝掉 | 按 R 放回原位`;
                 case 'shaker':
