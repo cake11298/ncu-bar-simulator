@@ -163,11 +163,11 @@ export class BarDisplays {
             });
         });
 
-        // 重要:調整位置到 Seaton 旁邊,並轉90度靠牆
+        // 重要:調整位置到 Seaton 旁邊,靠近小仙人掌位置
         // Seaton 位置大約在 (-2, 0, -5)
-        // 將展示櫃放在 Seaton 的左邊,靠近左側牆壁
-        displayCase.position.set(-6.5, 0, -4);
-        displayCase.rotation.y = Math.PI / 2; // 轉90度,面向吧檯中心
+        // 將展示櫃放在 Seaton 的左邊,三顆小仙人掌附近有櫃子的位置
+        displayCase.position.set(-4.8, 0, -4.5);
+        displayCase.rotation.y = Math.PI / 6; // 稍微旋轉,面向玩家
 
         displayCase.castShadow = true;
         displayCase.receiveShadow = true;

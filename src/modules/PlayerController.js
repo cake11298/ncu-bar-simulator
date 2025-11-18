@@ -196,11 +196,6 @@ export class PlayerController {
         return this.keys['q'] && this.keyPressed['q'];
     }
 
-    // 檢查是否按下放回原位鍵 (R)
-    isReturnPressed() {
-        return this.keys['r'] && this.keyPressed['r'];
-    }
-
     // 檢查是否按住滑鼠左鍵（倒酒/搖酒）
     isLeftMouseHeld() {
         return this.mouseButtons.left;
