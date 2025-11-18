@@ -175,13 +175,13 @@ export default class InteractionSystem {
                 this.physics.freezeBodyAt(object, originalPos, upright);
             }
         } else {
-            // 酒瓶類型不允許放在當前位置，只能放回原位
-            if (objectType === 'bottle') {
+            // 酒牆上的主要酒瓶不允許放在當前位置，只能放回原位
+            if (object.userData && object.userData.isMainBottle) {
                 console.log('酒瓶只能放回原位（按 R 鍵）');
                 return; // 不執行放下操作
             }
 
-            // 杯子、搖酒器等可以放在當前位置
+            // 杯子、搖酒器、材料瓶等可以放在當前位置
             // 使用射線檢測找到下方最近的表面
             const surfacePosition = this.findNearestSurface(object.position);
 

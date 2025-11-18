@@ -76,6 +76,9 @@ export class BarEnvironment {
             // 添加物理屬性
             this.physics.addCylinderBody(bottle, 0.15, 0.18, 0.85, 0.5, 'glass');
 
+            // 標記為酒牆上的主要酒瓶（只能放回原位）
+            bottle.userData.isMainBottle = true;
+
             // 標記酒類型
             bottle.userData.liquorType = bottleType;
         });
@@ -109,6 +112,20 @@ export class BarEnvironment {
                 // 計算世界位置
                 const worldPos = new THREE.Vector3();
                 bottle.getWorldPosition(worldPos);
+
+                // 計算世界旋轉
+                const worldQuaternion = new THREE.Quaternion();
+                bottle.getWorldQuaternion(worldQuaternion);
+
+                // 從 displayCase 中移除並添加到 scene（確保位置計算正確）
+                if (bottle.parent) {
+                    bottle.parent.remove(bottle);
+                }
+                this.scene.add(bottle);
+
+                // 設置世界位置和旋轉
+                bottle.position.copy(worldPos);
+                bottle.quaternion.copy(worldQuaternion);
 
                 this.interaction.registerInteractable(bottle, 'bottle', worldPos);
                 this.physics.addCylinderBody(bottle, 0.08, 0.1, 0.35, 0.2, 'glass');
